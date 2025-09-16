@@ -188,7 +188,12 @@ function drawPreview() {
 // ------------------
 
 // 時計クリック → 設定ボタン表示/非表示
-canvas.addEventListener("click", () => {
+canvas.addEventListener("click", (e) => {
+  // If settings panel is open, ignore clicks on canvas so controls remain usable
+  if (!settingsPanel.classList.contains("hidden")) {
+    return;
+  }
+
   if (settingsBtn.style.opacity === "1") {
     settingsBtn.style.opacity = "0";
     settingsBtn.style.pointerEvents = "none";
@@ -198,12 +203,25 @@ canvas.addEventListener("click", () => {
   }
 });
 
+// Prevent clicks inside the settings panel from bubbling to the canvas
+settingsPanel.addEventListener("click", (e) => {
+  e.stopPropagation();
+});
+
 // 設定ボタンクリック → パネル表示
-settingsBtn.addEventListener("click", () => {
+settingsBtn.addEventListener("click", (e) => {
+  e.stopPropagation();
+  // Cancel any pending hide timer while user opens/settings
+  if (hideSettingsBtnTimeout) {
+    clearTimeout(hideSettingsBtnTimeout);
+    hideSettingsBtnTimeout = null;
+  }
   settingsPanel.classList.remove("hidden");
-  // Do NOT hide the settings button when opening settings
-  // settingsBtn.style.opacity = "0";
-  // settingsBtn.style.pointerEvents = "none";
+  // Ensure panel receives pointer events (in case parent/other css blocks them)
+  settingsPanel.style.pointerEvents = "auto";
+  // Keep settings button visible while settings are open
+  settingsBtn.style.opacity = "1";
+  settingsBtn.style.pointerEvents = "auto";
   drawPreview();
 });
 
