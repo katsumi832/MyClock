@@ -103,8 +103,6 @@ canvas {
   box-shadow: 0 0 0 2px #2196f3;
 }
 
-/* preview uses the main canvas now */
-
 /* Vertical clock helper styles (preview/main rely on canvas drawing) */
 .vertical-digit {
   font-family: monospace;

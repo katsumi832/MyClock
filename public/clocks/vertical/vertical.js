@@ -15,15 +15,15 @@
     const ease = (t) => t < 0 ? 0 : t > 1 ? 1 : (1 - Math.pow(1 - t, 3));
     const p = ease(frac);
 
-  // draw current digit sliding down, and next digit coming from above
+  // draw current digit sliding down, and next digit coming from above (so numbers flow top->bottom)
   ctx.globalAlpha = 1;
   ctx.fillText(String(currentValue), 0, p * digitHeight);
-  ctx.fillText(String(nextValue), 0, -(1 - p) * digitHeight);
+  ctx.fillText(String(nextValue), 0, (p - 1) * digitHeight);
 
-  // slight faded neighbors for context
+  // slight faded neighbors for context (below and above)
   ctx.globalAlpha = 0.25;
-  ctx.fillText(String((currentValue + 1) % 10), 0, (2 + p) * digitHeight);
-  ctx.fillText(String((currentValue + 9) % 10), 0, - (2 - p) * digitHeight);
+  ctx.fillText(String((currentValue + 1) % 10), 0, (1 + p) * digitHeight);
+  ctx.fillText(String((currentValue + 9) % 10), 0, -(1 - p) * digitHeight);
 
     ctx.restore();
   }

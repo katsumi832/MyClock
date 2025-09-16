@@ -34,8 +34,7 @@ const sizeLabel = document.getElementById("size-label");
 const modeToggleBtn = document.getElementById("mode-toggle");
 const applyBtn = document.getElementById("apply-btn");
 
-// There is no separate preview canvas now; we render preview on the main canvas
-const previewCtx = ctx; // alias: preview renders to main canvas when settings open
+// (Preview removed from DOM) preview will render on the main canvas while settings are open
 
 // ------------------
 // 時計スタイル
@@ -215,7 +214,8 @@ function drawBinary(ctx, w, h, color, size) {
 
 // Helper to decide background mode for a given context. Preview uses editingSettings, main uses appliedSettings
 function modeForContext(ctx) {
-  if (ctx === previewCtx) return editingSettings.mode;
+  // If settings panel is open, preview uses editingSettings.mode
+  if (!settingsPanel.classList.contains("hidden")) return editingSettings.mode;
   return appliedSettings.mode;
 }
 
@@ -223,9 +223,13 @@ function modeForContext(ctx) {
 // 時計レンダリング
 // ------------------
 function renderClock() {
-  // If settings panel is open, render the preview (editingSettings) on the main canvas
-  const activeSettings = settingsPanel.classList.contains('hidden') ? appliedSettings : editingSettings;
-  const { styleIndex, color, size, mode } = activeSettings;
+  // If settings panel is open, render preview on the main canvas instead
+  if (!settingsPanel.classList.contains("hidden")) {
+    drawPreview();
+    return;
+  }
+
+  const { styleIndex, color, size, mode } = appliedSettings;
   const w = canvas.width;
   const h = canvas.height;
 
@@ -252,24 +256,25 @@ function renderClock() {
 }
 
 function drawPreview() {
-  // Render editingSettings onto the main canvas as a preview while settings are open
   const { styleIndex, color, size, mode } = editingSettings;
   const w = canvas.width;
   const h = canvas.height;
+  // Render preview on main canvas
+  ctx.fillStyle = mode === "dark" ? "#000" : "#fff";
+  ctx.fillRect(0, 0, w, h);
 
-  previewCtx.fillStyle = mode === "dark" ? "#000" : "#fff";
-  previewCtx.fillRect(0, 0, w, h);
+  // Scale preview size relative to chosen size and canvas
+  const previewSize = Math.max(20, Math.min( Math.round(size * 0.5), Math.floor(Math.min(w, h) * 0.5) ));
 
-  const previewSize = size; // use the user-selected size directly on main canvas
   const style = clockStyles[styleIndex];
-  if (style === "Digital") drawDigital(previewCtx, w, h, color, previewSize);
-  else if (style === "Analog") drawAnalog(previewCtx, w, h, color, previewSize);
-  else if (style === "Minimal") drawMinimal(previewCtx, w, h, color, previewSize);
-  else if (style === "Dots") drawDots(previewCtx, w, h, color, previewSize);
-  else if (style === "Binary") drawBinary(previewCtx, w, h, color, previewSize);
+  if (style === "Digital") drawDigital(ctx, w, h, color, previewSize);
+  else if (style === "Analog") drawAnalog(ctx, w, h, color, Math.round(previewSize * 0.8));
+  else if (style === "Minimal") drawMinimal(ctx, w, h, color, previewSize);
+  else if (style === "Dots") drawDots(ctx, w, h, color, previewSize);
+  else if (style === "Binary") drawBinary(ctx, w, h, color, previewSize);
   else if (style === "Vertical") {
     if (typeof window.renderVerticalClock === 'function') {
-      window.renderVerticalClock(previewCtx, w, h, color, previewSize, new Date(), { bg: mode === 'dark' ? '#000' : '#fff' });
+      window.renderVerticalClock(ctx, w, h, color, size, new Date(), { bg: mode === 'dark' ? '#000' : '#fff' });
     }
   }
 }
