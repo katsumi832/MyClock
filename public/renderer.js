@@ -34,16 +34,13 @@ const sizeLabel = document.getElementById("size-label");
 const modeToggleBtn = document.getElementById("mode-toggle");
 const applyBtn = document.getElementById("apply-btn");
 
-// プレビューキャンバス
-const previewCanvas = document.getElementById("clock-preview-canvas");
-const previewCtx = previewCanvas.getContext("2d");
-previewCanvas.width = 300;
-previewCanvas.height = 150;
+// There is no separate preview canvas now; we render preview on the main canvas
+const previewCtx = ctx; // alias: preview renders to main canvas when settings open
 
 // ------------------
 // 時計スタイル
 // ------------------
-const clockStyles = ["Digital", "Analog"];
+const clockStyles = ["Digital", "Analog", "Minimal", "Dots", "Binary", "Vertical"];
 let currentStyleIndex = 0;
 
 // 選択状態（未保存の編集）
@@ -75,6 +72,11 @@ function renderColorOptions() {
   });
 }
 renderColorOptions();
+
+// Initialize labels to reflect current editingSettings
+styleLabel.textContent = clockStyles[editingSettings.styleIndex];
+sizeLabel.textContent = editingSettings.size;
+modeToggleBtn.textContent = editingSettings.mode === "dark" ? "Dark Mode" : "Light Mode";
 
 // ------------------
 // 時計描画関数
@@ -153,33 +155,122 @@ function drawAnalog(ctx, w, h, color, size) {
   ctx.stroke();
 }
 
+function drawMinimal(ctx, w, h, color, size) {
+  ctx.clearRect(0, 0, w, h);
+  ctx.fillStyle = modeForContext(ctx) === "dark" ? "#000" : "#fff";
+  ctx.fillRect(0, 0, w, h);
+  ctx.fillStyle = color;
+  ctx.textAlign = "center";
+  ctx.textBaseline = "middle";
+  ctx.font = `600 ${Math.floor(size * 0.9)}px 'Segoe UI', sans-serif`;
+  const now = new Date();
+  const text = now.toLocaleTimeString("en-GB", { hour12: false });
+  ctx.fillText(text, w / 2, h / 2);
+}
+
+function drawDots(ctx, w, h, color, size) {
+  ctx.clearRect(0, 0, w, h);
+  ctx.fillStyle = modeForContext(ctx) === "dark" ? "#000" : "#fff";
+  ctx.fillRect(0, 0, w, h);
+  const now = new Date();
+  const hours = now.getHours();
+  const mins = now.getMinutes();
+  const secs = now.getSeconds();
+  const gap = Math.max(6, Math.floor(size / 6));
+  const radius = Math.max(3, Math.floor(size / 12));
+  const startX = w / 2 - 3 * (gap + radius);
+  const baseY = h / 2;
+  ctx.fillStyle = color;
+  const drawSeries = (value, offsetY) => {
+    const str = value.toString().padStart(2, "0");
+    for (let i = 0; i < str.length; i++) {
+      const x = startX + i * (gap + radius * 2);
+      const y = baseY + offsetY;
+      ctx.beginPath();
+      ctx.arc(x, y, radius, 0, Math.PI * 2);
+      ctx.fill();
+    }
+  };
+  drawSeries(hours, -gap - radius);
+  drawSeries(mins, 0);
+  drawSeries(secs, gap + radius);
+}
+
+function drawBinary(ctx, w, h, color, size) {
+  ctx.clearRect(0, 0, w, h);
+  ctx.fillStyle = modeForContext(ctx) === "dark" ? "#000" : "#fff";
+  ctx.fillRect(0, 0, w, h);
+  const now = new Date();
+  const parts = [now.getHours(), now.getMinutes(), now.getSeconds()];
+  ctx.fillStyle = color;
+  ctx.textAlign = "left";
+  ctx.textBaseline = "top";
+  ctx.font = `${Math.floor(size * 0.12)}px monospace`;
+  const pad = 2;
+  parts.forEach((p, idx) => {
+    const bin = p.toString(2).padStart(6, "0");
+    ctx.fillText(bin, 10, 10 + idx * (size * 0.15 + pad));
+  });
+}
+
+// Helper to decide background mode for a given context. Preview uses editingSettings, main uses appliedSettings
+function modeForContext(ctx) {
+  if (ctx === previewCtx) return editingSettings.mode;
+  return appliedSettings.mode;
+}
+
 // ------------------
 // 時計レンダリング
 // ------------------
 function renderClock() {
-  const { styleIndex, color, size, mode } = appliedSettings;
+  // If settings panel is open, render the preview (editingSettings) on the main canvas
+  const activeSettings = settingsPanel.classList.contains('hidden') ? appliedSettings : editingSettings;
+  const { styleIndex, color, size, mode } = activeSettings;
   const w = canvas.width;
   const h = canvas.height;
 
   ctx.fillStyle = mode === "dark" ? "#000" : "#fff";
   ctx.fillRect(0, 0, w, h);
-
-  if (clockStyles[styleIndex] === "Digital") {
-    drawDigital(ctx, w, h, color, size);
-  } else {
-    drawAnalog(ctx, w, h, color, size);
+  const style = clockStyles[styleIndex];
+  if (style === "Digital") drawDigital(ctx, w, h, color, size);
+  else if (style === "Analog") drawAnalog(ctx, w, h, color, size);
+  else if (style === "Minimal") drawMinimal(ctx, w, h, color, size);
+  else if (style === "Dots") drawDots(ctx, w, h, color, size);
+  else if (style === "Binary") drawBinary(ctx, w, h, color, size);
+  else if (style === "Vertical") {
+    // lazy-load vertical clock script once
+    if (typeof window.renderVerticalClock === 'function') {
+      window.renderVerticalClock(ctx, w, h, color, size, new Date(), { bg: mode === 'dark' ? '#000' : '#fff' });
+    } else if (!window._verticalScriptLoading) {
+      window._verticalScriptLoading = true;
+      const s = document.createElement('script');
+      s.src = 'clocks/vertical/vertical.js';
+      s.onload = () => { window._verticalScriptLoaded = true; };
+      document.body.appendChild(s);
+    }
   }
 }
 
 function drawPreview() {
+  // Render editingSettings onto the main canvas as a preview while settings are open
   const { styleIndex, color, size, mode } = editingSettings;
-  previewCtx.fillStyle = mode === "dark" ? "#000" : "#fff";
-  previewCtx.fillRect(0, 0, previewCanvas.width, previewCanvas.height);
+  const w = canvas.width;
+  const h = canvas.height;
 
-  if (clockStyles[styleIndex] === "Digital") {
-    drawDigital(previewCtx, previewCanvas.width, previewCanvas.height, color, 40);
-  } else {
-    drawAnalog(previewCtx, previewCanvas.width, previewCanvas.height, color, 50);
+  previewCtx.fillStyle = mode === "dark" ? "#000" : "#fff";
+  previewCtx.fillRect(0, 0, w, h);
+
+  const previewSize = size; // use the user-selected size directly on main canvas
+  const style = clockStyles[styleIndex];
+  if (style === "Digital") drawDigital(previewCtx, w, h, color, previewSize);
+  else if (style === "Analog") drawAnalog(previewCtx, w, h, color, previewSize);
+  else if (style === "Minimal") drawMinimal(previewCtx, w, h, color, previewSize);
+  else if (style === "Dots") drawDots(previewCtx, w, h, color, previewSize);
+  else if (style === "Binary") drawBinary(previewCtx, w, h, color, previewSize);
+  else if (style === "Vertical") {
+    if (typeof window.renderVerticalClock === 'function') {
+      window.renderVerticalClock(previewCtx, w, h, color, previewSize, new Date(), { bg: mode === 'dark' ? '#000' : '#fff' });
+    }
   }
 }
 
@@ -277,6 +368,9 @@ applyBtn.addEventListener("click", () => {
   settingsBtn.style.opacity = "1";
   settingsBtn.style.pointerEvents = "auto";
   hideSettingsBtnAfterDelay();
+  // Immediately update main clock rendering and preview
+  renderClock();
+  drawPreview();
 });
 
 // 戻るボタン

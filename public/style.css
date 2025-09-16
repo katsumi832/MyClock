@@ -17,7 +17,7 @@ canvas {
   left: 0;
   width: 100vw;
   z-index: 10;
-  pointer-events: none;
+  pointer-events: auto;
 }
 
 /* 設定ボタン */
@@ -48,18 +48,20 @@ canvas {
 /* 設定パネル */
 #settings-panel {
   backdrop-filter: blur(16px);
-  background: rgba(255,255,255,0.9);
-  border-radius: 32px;
-  max-width: 420px;
-  min-width: 340px;
-  padding: 32px;
+  background: rgba(255,255,255,0.95);
+  border-radius: 24px;
+  max-width: 640px;
+  min-width: 520px;
+  width: 36vw;
+  padding: 36px;
   position: absolute;
-  top: 80px;
+  top: 60px;
   right: 48px;
   color: #222;
   z-index: 100;
   font-size: 1.1rem;
-  box-shadow: 0 8px 32px rgba(0,0,0,0.18);
+  box-shadow: 0 12px 48px rgba(0,0,0,0.22);
+  pointer-events: auto;
 }
 .hidden {
   display: none !important;
@@ -101,11 +103,11 @@ canvas {
   box-shadow: 0 0 0 2px #2196f3;
 }
 
-#clock-preview-canvas {
-  display: block;
-  margin: 0 auto 20px auto;
-  background: rgba(255,255,255,0.1);
-  border-radius: 24px;
+/* preview uses the main canvas now */
+
+/* Vertical clock helper styles (preview/main rely on canvas drawing) */
+.vertical-digit {
+  font-family: monospace;
 }
 
 /* Back ボタン */
