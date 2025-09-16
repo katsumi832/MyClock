@@ -1,0 +1,138 @@
+body {
+  background: #000;
+  margin: 0;
+  overflow: hidden;
+  font-family: 'SF Pro Display', 'Segoe UI', Arial, sans-serif;
+}
+
+/* 時計キャンバス */
+canvas {
+  display: block;
+}
+
+/* UIバー */
+#ui-bar {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  z-index: 10;
+  pointer-events: none;
+}
+
+/* 設定ボタン */
+#settings-btn {
+  opacity: 0;
+  pointer-events: none;
+  position: absolute;
+  top: 32px;
+  right: 48px;
+  background: rgba(40,40,40,0.7);
+  backdrop-filter: blur(8px);
+  border-radius: 50%;
+  width: 56px;
+  height: 56px;
+  z-index: 20;
+  font-size: 2rem;
+  color: #2196f3;
+  border: none;
+  cursor: pointer;
+  transition: opacity 0.3s;
+  pointer-events: auto;
+}
+#settings-btn:hover {
+  background: rgba(33,150,243,0.12);
+  color: #1565c0;
+}
+
+/* 設定パネル */
+#settings-panel {
+  backdrop-filter: blur(16px);
+  background: rgba(255,255,255,0.9);
+  border-radius: 32px;
+  max-width: 420px;
+  min-width: 340px;
+  padding: 32px;
+  position: absolute;
+  top: 80px;
+  right: 48px;
+  color: #222;
+  z-index: 100;
+  font-size: 1.1rem;
+  box-shadow: 0 8px 32px rgba(0,0,0,0.18);
+}
+.hidden {
+  display: none !important;
+}
+
+.settings-group {
+  margin-bottom: 16px;
+}
+
+#settings-panel button {
+  margin: 0 4px;
+  font-size: 1rem;
+  border-radius: 12px;
+  border: none;
+  padding: 6px 18px;
+  background: #f2f2f7;
+  color: #2196f3;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.2s, color 0.2s;
+}
+#settings-panel button:hover {
+  background: #e3eafc;
+  color: #1565c0;
+}
+
+.color-circle {
+  display: inline-block;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  margin: 0 6px;
+  border: 2px solid #e0e0e0;
+  cursor: pointer;
+  transition: 0.2s;
+}
+.color-circle.selected {
+  border: 3px solid #2196f3;
+  box-shadow: 0 0 0 2px #2196f3;
+}
+
+#clock-preview-canvas {
+  display: block;
+  margin: 0 auto 20px auto;
+  background: rgba(255,255,255,0.1);
+  border-radius: 24px;
+}
+
+/* Back ボタン */
+#back-btn {
+  display: block;
+  margin: 24px auto 0 auto;
+  background: #2196f3;
+  color: #fff;
+  border: none;
+  border-radius: 16px;
+  padding: 10px 32px;
+  font-size: 1.1rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+#back-btn:hover {
+  background: #1565c0;
+}
+
+/* Warning */
+#warning-div {
+  background: #f44336;
+  color: #fff;
+  padding: 16px;
+  border-radius: 16px;
+  margin-top: 18px;
+  text-align: center;
+  font-size: 1.08rem;
+}

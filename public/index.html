@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Clock App</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div id="ui-bar">
+    <button id="settings-btn" title="Settings">⚙</button>
+    <div id="settings-panel" class="hidden">
+      <!-- Clock preview -->
+      <canvas id="clock-preview-canvas"></canvas>
+
+      <div class="settings-group">
+        <label>Clock Style:</label>
+        <button id="clock-style-prev">◀</button>
+        <span id="clock-style-label">Digital</span>
+        <button id="clock-style-next">▶</button>
+      </div>
+
+      <div class="settings-group">
+        <label>Color:</label>
+        <span id="color-options"></span>
+      </div>
+
+      <div class="settings-group">
+        <label>Size:</label>
+        <button id="size-minus">−</button>
+        <span id="size-label">180</span>
+        <button id="size-plus">＋</button>
+      </div>
+
+      <div class="settings-group">
+        <label>Mode:</label>
+        <button id="mode-toggle">Dark Mode</button>
+      </div>
+
+      <button id="apply-btn">Confirm Change</button>
+      <!-- Back + Warning are injected by JS -->
+    </div>
+  </div>
+
+  <canvas id="clockCanvas"></canvas>
+  <script src="renderer.js"></script>
+</body>
+</html>
