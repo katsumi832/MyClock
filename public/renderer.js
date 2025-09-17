@@ -53,8 +53,19 @@ let editingSettings = {
 // 適用済み状態
 let appliedSettings = { ...editingSettings };
 
-// カラーパレット
-const palette = ["#00ff88", "#2196f3", "#ff4081", "#ff9800", "#ffffff"];
+// カラーパレット (expanded)
+const palette = [
+  "#00ff88",
+  "#2196f3",
+  "#ff4081",
+  "#ff9800",
+  "#ffffff",
+  "#ffd600",
+  "#8e24aa",
+  "#00bcd4",
+  "#4caf50",
+  "#e91e63"
+];
 function renderColorOptions() {
   colorOptionsDiv.innerHTML = "";
   palette.forEach((c) => {
@@ -202,13 +213,15 @@ function drawBinary(ctx, w, h, color, size) {
   const now = new Date();
   const parts = [now.getHours(), now.getMinutes(), now.getSeconds()];
   ctx.fillStyle = color;
-  ctx.textAlign = "left";
-  ctx.textBaseline = "top";
+  ctx.textAlign = "center";
+  ctx.textBaseline = "middle";
   ctx.font = `${Math.floor(size * 0.12)}px monospace`;
-  const pad = 2;
+  const pad = Math.max(6, Math.floor(size * 0.08));
+  const totalHeight = parts.length * (size * 0.15) + (parts.length - 1) * pad;
+  const startY = h / 2 - totalHeight / 2 + (size * 0.15) / 2;
   parts.forEach((p, idx) => {
     const bin = p.toString(2).padStart(6, "0");
-    ctx.fillText(bin, 10, 10 + idx * (size * 0.15 + pad));
+    ctx.fillText(bin, w / 2, startY + idx * (size * 0.15 + pad));
   });
 }
 
@@ -283,8 +296,8 @@ function drawPreview() {
   ctx.fillStyle = mode === "dark" ? "#000" : "#fff";
   ctx.fillRect(0, 0, w, h);
 
-  // Scale preview size relative to chosen size and canvas
-  const previewSize = Math.max(20, Math.min( Math.round(size * 0.5), Math.floor(Math.min(w, h) * 0.5) ));
+  // Use the chosen `size` directly for preview so the clock doesn't shrink
+  const previewSize = size;
 
   const style = clockStyles[styleIndex];
   if (style === "Clock 1") {

@@ -2,8 +2,8 @@
 // Vertical rolling digits clock implementation
 // Exposes function: renderVerticalClock(ctx, w, h, color, size, now, options)
 (function(global){
-  function drawDigitColumn(ctx, x, y, digitWidth, digitHeight, currentValue, nextValue, frac, color, fontSize) {
-    // currentValue: current digit shown, nextValue: digit after change, frac: 0..1 animation progress
+  function drawDigitColumn(ctx, x, y, digitWidth, digitHeight, currentValue, nextValue, frac, color, fontSize, opts) {
+    // opts: { gapRows: number, continuous: bool, speedRowsPerSec: number }
     ctx.save();
     ctx.translate(x, y);
     ctx.fillStyle = color;
@@ -11,19 +11,39 @@
     ctx.textBaseline = 'middle';
     ctx.font = `700 ${fontSize}px monospace`;
 
-    // easing
-    const ease = (t) => t < 0 ? 0 : t > 1 ? 1 : (1 - Math.pow(1 - t, 3));
-    const p = ease(frac);
+    if (opts && opts.continuous) {
+      // continuous scrolling: render many stacked numbers with no gap, moving at constant rows/sec
+      const rowsPerSec = opts.speedRowsPerSec || 1; // rows (digits) per second
+      // frac represents progress within current digit (0..1) where 1 means moved down by one digitHeight
+      const offset = frac * digitHeight; // how much the column has moved down
+      // render a vertical strip of digits centered at y
+      const visibleRows = Math.ceil((ctx.canvas.height / digitHeight)) + 4; // plenty
+      const centerIndex = 0; // currentValue at center baseline
+      // determine the numeric value at center (currentValue) and render around it
+      // We'll render relative indices so numbers wrap 0..9
+      for (let r = -Math.floor(visibleRows/2); r <= Math.floor(visibleRows/2); r++) {
+        const val = ((currentValue + r) % 10 + 10) % 10;
+        const drawY = r * digitHeight + offset;
+        ctx.globalAlpha = 1;
+        ctx.fillText(String(val), 0, drawY);
+      }
+    } else {
+      // normal behavior: there is a visible gap between rows; we animate only nearby neighbors
+      const ease = (t) => t < 0 ? 0 : t > 1 ? 1 : (1 - Math.pow(1 - t, 3));
+      const p = ease(frac);
+      // draw current digit sliding down, and next digit coming from above (top -> bottom)
+      ctx.globalAlpha = 1;
+      // apply gap by scaling the base positions
+      const gapRows = opts && opts.gapRows ? opts.gapRows : 1;
+      const rowSpace = digitHeight + (gapRows - 1) * (digitHeight * 0.15);
+      ctx.fillText(String(currentValue), 0, p * rowSpace);
+      ctx.fillText(String(nextValue), 0, (p - 1) * rowSpace);
 
-  // draw current digit sliding down, and next digit coming from above (so numbers flow top->bottom)
-  ctx.globalAlpha = 1;
-  ctx.fillText(String(currentValue), 0, p * digitHeight);
-  ctx.fillText(String(nextValue), 0, (p - 1) * digitHeight);
-
-  // slight faded neighbors for context (below and above)
-  ctx.globalAlpha = 0.25;
-  ctx.fillText(String((currentValue + 1) % 10), 0, (1 + p) * digitHeight);
-  ctx.fillText(String((currentValue + 9) % 10), 0, -(1 - p) * digitHeight);
+      // slight faded neighbors for context
+      ctx.globalAlpha = 0.25;
+      ctx.fillText(String((currentValue + 1) % 10), 0, (1 + p) * rowSpace);
+      ctx.fillText(String((currentValue + 9) % 10), 0, -(1 - p) * rowSpace);
+    }
 
     ctx.restore();
   }
@@ -31,7 +51,7 @@
   function renderVerticalClock(ctx, w, h, color, size, now, options) {
     options = options || {};
     const padding = options.padding || 16;
-    const gap = options.gap || 8;
+  const gap = options.gap || 8;
 
     // compute digits
     const hours = now.getHours();
@@ -51,7 +71,7 @@
     const animWindow = (options.animWindowMs || 600) / 1000; // seconds (default 600ms)
 
     // layout: six columns for HH:MM:SS
-    const columns = [hTens, hOnes, mTens, mOnes, sTens, sOnes];
+  const columns = [hTens, hOnes, mTens, mOnes, sTens, sOnes];
     const tToNext = new Array(6).fill(Infinity);
 
     const nowMs = now.getTime();
@@ -111,11 +131,11 @@
     hTensDate.setMilliseconds(0);
     tToNext[0] = secondsUntil(hTensDate);
 
-    // compute digit sizes
-    const totalGap = gap * (columns.length - 1) + padding * 2;
-    const digitWidth = Math.min(80, Math.floor((w - totalGap) / columns.length));
-    const digitHeight = Math.floor(digitWidth * 1.6);
-    const fontSize = Math.floor(digitWidth * 0.9);
+  // compute digit sizes
+  const totalGap = gap * (columns.length - 1) + padding * 2;
+  const digitWidth = Math.min(80, Math.floor((w - totalGap) / columns.length));
+  const digitHeight = Math.floor(digitWidth * 1.6);
+  const fontSize = Math.floor(digitWidth * 0.9);
 
     // background
     ctx.clearRect(0, 0, w, h);
@@ -144,7 +164,17 @@
         nextValue = futureDigits[i];
       }
 
-      drawDigitColumn(ctx, x, centerY, digitWidth, digitHeight, columns[i], nextValue, frac, color, fontSize);
+      // For the last digit (seconds ones), render continuous with many stacked numbers and no gap
+      if (i === 5) {
+        // For continuous movement, compute a fractional offset within the second based on ms
+        const totalSecFrac = (ms / 1000) + (secs % 1);
+        // We'll compute fracContinuous as fraction of digit movement (0..1) within the second
+        const fracContinuous = (ms / 1000);
+        drawDigitColumn(ctx, x, centerY, digitWidth, digitHeight, columns[i], nextValue, fracContinuous, color, fontSize, { continuous: true, speedRowsPerSec: 1 });
+      } else {
+        // non-last digits: introduce a small gap (1 row by default)
+        drawDigitColumn(ctx, x, centerY, digitWidth, digitHeight, columns[i], nextValue, frac, color, fontSize, { gapRows: 2 });
+      }
     }
 
     // draw colon separators between HH:MM:SS (between col 1&2 and 3&4)

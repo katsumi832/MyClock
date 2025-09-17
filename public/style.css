@@ -10,6 +10,8 @@ canvas {
   display: block;
 }
 
+/* ensure canvas content is visually centered by default (handled in renderer drawing) */
+
 /* UIバー */
 #ui-bar {
   position: absolute;
