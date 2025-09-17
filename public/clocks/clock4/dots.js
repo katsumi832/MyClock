@@ -1,13 +1,50 @@
 (function(global){
+  // Creative Clock 4: radial seconds ring + centered digital time
   function renderClock4(ctx,w,h,color,size,now,options){
     ctx.clearRect(0,0,w,h);
-    ctx.fillStyle = options && options.bg ? options.bg : '#000';
-    ctx.fillRect(0,0,w,h);
-    const hours = now.getHours(); const mins = now.getMinutes(); const secs = now.getSeconds();
-    const gap = Math.max(6, Math.floor(size/6)); const radius = Math.max(3, Math.floor(size/12));
-    const startX = w/2 - 3*(gap+radius); const baseY = h/2; ctx.fillStyle = color;
-    const drawSeries = (value, offsetY) => { const str = value.toString().padStart(2,'0'); for(let i=0;i<str.length;i++){ const x = startX + i*(gap+radius*2); const y = baseY + offsetY; ctx.beginPath(); ctx.arc(x,y,radius,0,Math.PI*2); ctx.fill(); }};
-    drawSeries(hours, -gap-radius); drawSeries(mins,0); drawSeries(secs,gap+radius);
+    const bg = options && options.bg ? options.bg : '#000';
+    ctx.fillStyle = bg; ctx.fillRect(0,0,w,h);
+
+    const cx = w/2, cy = h/2;
+    // ring parameters
+    const ringRadius = Math.min(w,h) * 0.35;
+    const dotCount = 60;
+    const dotRadius = Math.max(2, Math.floor(size/30));
+    const seconds = now.getSeconds();
+    // draw background ring (subtle)
+    for(let i=0;i<dotCount;i++){
+      const angle = (i / dotCount) * Math.PI * 2 - Math.PI/2;
+      const x = cx + Math.cos(angle) * ringRadius;
+      const y = cy + Math.sin(angle) * ringRadius;
+      ctx.beginPath(); ctx.fillStyle = '#222'; ctx.arc(x,y,dotRadius,0,Math.PI*2); ctx.fill();
+    }
+    // highlight recent seconds with color gradient
+    for(let i=0;i<20;i++){
+      const idx = (seconds - i + 120) % 60; // wrap
+      const angle = (idx / dotCount) * Math.PI * 2 - Math.PI/2;
+      const x = cx + Math.cos(angle) * ringRadius;
+      const y = cy + Math.sin(angle) * ringRadius;
+      const a = Math.max(0.08, (20 - i) / 20);
+      ctx.beginPath(); ctx.fillStyle = hexWithAlpha(color, a); ctx.arc(x,y,dotRadius*1.3,0,Math.PI*2); ctx.fill();
+    }
+
+    // center time display
+    ctx.fillStyle = color;
+    ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    const fontSize = Math.floor(size * 0.9);
+    ctx.font = `700 ${fontSize}px 'Segoe UI', sans-serif`;
+    const text = now.toLocaleTimeString('en-GB',{hour12:false});
+    ctx.fillText(text, cx, cy);
+
+    // helper to blend hex color with alpha
+    function hexWithAlpha(hex, alpha){
+      // parse #rrggbb
+      const c = hex.replace('#','');
+      const r = parseInt(c.substring(0,2),16);
+      const g = parseInt(c.substring(2,4),16);
+      const b = parseInt(c.substring(4,6),16);
+      return `rgba(${r},${g},${b},${alpha})`;
+    }
   }
   global.renderClock4 = renderClock4;
 })(this);

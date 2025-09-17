@@ -164,12 +164,19 @@
     ctx.fillStyle = options.bg || '#000';
     ctx.fillRect(0, 0, w, h);
 
-    // compute start x
-    const startX = (w - (digitWidth * columns.length + gap * (columns.length - 1))) / 2 + digitWidth/2;
+  // compute start x with tighter spacing within pairs (HH, MM, SS)
+  const pairInnerGap = Math.max(2, Math.floor(gap / 3)); // small gap between tens/ones
+  const pairOuterGap = gap; // gap between pairs
+  // total width = 6 digits + inner gaps for each pair (3) + outer gaps between pairs (2)
+  const totalWidth = digitWidth * 6 + pairInnerGap * 3 + pairOuterGap * 2;
+  const startX = (w - totalWidth) / 2 + digitWidth / 2;
     const centerY = h / 2;
 
     for (let i = 0; i < columns.length; i++) {
-      const x = startX + i * (digitWidth + gap);
+      // map index to x with tighter pair spacing: indices 0-1 (H),2-3(M),4-5(S)
+      const pairIndex = Math.floor(i / 2);
+      const inPairIndex = i % 2; // 0 -> tens, 1 -> ones
+      const x = startX + pairIndex * (digitWidth * 2 + pairInnerGap + pairOuterGap) + inPairIndex * (digitWidth + pairInnerGap);
       const timeUntil = tToNext[i];
       let frac = 0;
       if (timeUntil <= animWindow) {
