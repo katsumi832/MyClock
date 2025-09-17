@@ -48,7 +48,7 @@ let editingSettings = {
   color: "#00ff88",
   size: 180,
   mode: "dark",
-  clock6Speed: 4,
+  clock6Speed: 1,
 };
 
 // 適用済み状態
@@ -267,9 +267,9 @@ function renderClock() {
       window.renderClock6(ctx, w, h, color, size, new Date(), { bg: mode === 'dark' ? '#000' : '#fff', clock6Speed: appliedSettings.clock6Speed });
     } else if (!window._clock6ScriptLoading) {
       window._clock6ScriptLoading = true;
-      const s = document.createElement('script');
-      s.src = 'clocks/vertical/vertical.js';
-      s.onload = () => { window._clock6ScriptLoaded = true; };
+  const s = document.createElement('script');
+  s.src = 'clocks/clock6/clock6.js';
+  s.onload = () => { window._clock6ScriptLoaded = true; };
       document.body.appendChild(s);
     }
   }
