@@ -39,7 +39,7 @@ const applyBtn = document.getElementById("apply-btn");
 // ------------------
 // 時計スタイル
 // ------------------
-const clockStyles = ["Clock 1", "Clock 2", "Clock 3", "Clock 4", "Clock 5", "Vertical"];
+const clockStyles = ["Clock 1", "Clock 2", "Clock 3", "Clock 4", "Clock 5", "Clock 6"];
 let currentStyleIndex = 0;
 
 // 選択状態（未保存の編集）
@@ -48,6 +48,7 @@ let editingSettings = {
   color: "#00ff88",
   size: 180,
   mode: "dark",
+  clock6Speed: 4,
 };
 
 // 適用済み状態
@@ -55,16 +56,12 @@ let appliedSettings = { ...editingSettings };
 
 // カラーパレット (expanded)
 const palette = [
-  "#00ff88",
-  "#2196f3",
-  "#ff4081",
-  "#ff9800",
-  "#ffffff",
-  "#ffd600",
-  "#8e24aa",
-  "#00bcd4",
-  "#4caf50",
-  "#e91e63"
+  "#00ff88","#2196f3","#ff4081","#ff9800","#ffffff",
+  "#ffd600","#8e24aa","#00bcd4","#4caf50","#e91e63",
+  "#9e9d24","#795548","#607d8b","#f06292","#ff7043",
+  "#c2185b","#7c4dff","#03a9f4","#388e3c","#ffeb3b",
+  "#ad1457","#00c853","#b388ff","#ff8a65","#d500f9",
+  "#263238","#ff5252","#ffab00","#304ffe","#69f0ae"
 ];
 function renderColorOptions() {
   colorOptionsDiv.innerHTML = "";
@@ -264,10 +261,10 @@ function renderClock() {
   } else if (style === "Clock 5") {
     if (typeof window.renderClock5 === 'function') window.renderClock5(ctx,w,h,color,size,new Date(),{bg:mode==='dark'?'#000':'#fff'});
     else lazyLoadClock(5);
-  } else if (style === "Vertical") {
+  } else if (style === "Clock 6") {
     // lazy-load vertical clock script once
     if (typeof window.renderVerticalClock === 'function') {
-      window.renderVerticalClock(ctx, w, h, color, size, new Date(), { bg: mode === 'dark' ? '#000' : '#fff' });
+  window.renderVerticalClock(ctx, w, h, color, size, new Date(), { bg: mode === 'dark' ? '#000' : '#fff', speeds: { all: appliedSettings.clock6Speed } });
     } else if (!window._verticalScriptLoading) {
       window._verticalScriptLoading = true;
       const s = document.createElement('script');
@@ -315,9 +312,9 @@ function drawPreview() {
   } else if (style === "Clock 5") {
     if (typeof window.renderClock5 === 'function') window.renderClock5(ctx,w,h,color,previewSize,new Date(),{bg:mode==='dark'?'#000':'#fff'});
     else lazyLoadClock(5);
-  } else if (style === "Vertical") {
+  } else if (style === "Clock 6") {
     if (typeof window.renderVerticalClock === 'function') {
-      window.renderVerticalClock(ctx, w, h, color, size, new Date(), { bg: mode === 'dark' ? '#000' : '#fff' });
+      window.renderVerticalClock(ctx, w, h, color, size, new Date(), { bg: mode === 'dark' ? '#000' : '#fff', speeds: { all: editingSettings.clock6Speed } });
     }
   }
 }

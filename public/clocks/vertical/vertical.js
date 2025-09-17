@@ -11,38 +11,61 @@
     ctx.textBaseline = 'middle';
     ctx.font = `700 ${fontSize}px monospace`;
 
-    if (opts && opts.continuous) {
-      // continuous scrolling: render many stacked numbers with no gap, moving at constant rows/sec
-      const rowsPerSec = opts.speedRowsPerSec || 1; // rows (digits) per second
-      // frac represents progress within current digit (0..1) where 1 means moved down by one digitHeight
-      const offset = frac * digitHeight; // how much the column has moved down
-      // render a vertical strip of digits centered at y
-      const visibleRows = Math.ceil((ctx.canvas.height / digitHeight)) + 4; // plenty
-      const centerIndex = 0; // currentValue at center baseline
-      // determine the numeric value at center (currentValue) and render around it
-      // We'll render relative indices so numbers wrap 0..9
-      for (let r = -Math.floor(visibleRows/2); r <= Math.floor(visibleRows/2); r++) {
-        const val = ((currentValue + r) % 10 + 10) % 10;
+  if (opts && opts.continuous) {
+  // continuous scrolling: render many stacked numbers with no gap, moving at constant rows/sec
+  // determine rows/sec: prefer opts.speedRowsPerSec, otherwise use sensible default (slower)
+  const rowsPerSec = (opts && opts.speedRowsPerSec) || 2;
+      const nowMs = Date.now();
+      const absoluteOffsetRows = (nowMs / 1000.0) * rowsPerSec;
+      const centerRowIndex = Math.floor(absoluteOffsetRows);
+      // fractional offset within the current row (0..1)
+      const fracRow = absoluteOffsetRows - centerRowIndex;
+      const offset = fracRow * digitHeight;
+      // show many rows vertically
+      const visibleRows = Math.ceil((ctx.canvas.height / digitHeight)) + 24;
+  const half = Math.floor(visibleRows / 2);
+  const centerDigit = currentValue;
+      const drawnYs = new Set();
+      for (let r = -half; r <= half; r++) {
+        // r<0 -> above center -> value = centerDigit + |r|
+        // r==0 -> centerDigit
+        // r>0 -> below center -> value = centerDigit - r
+        let val = (centerDigit - r) % 10;
+        val = (val + 10) % 10;
         const drawY = r * digitHeight + offset;
+        // avoid drawing two digits at the same rounded Y position
+        const roundedY = Math.round(drawY);
+        if (drawnYs.has(roundedY)) continue;
+        drawnYs.add(roundedY);
         ctx.globalAlpha = 1;
         ctx.fillText(String(val), 0, drawY);
       }
-    } else {
+  } else {
       // normal behavior: there is a visible gap between rows; we animate only nearby neighbors
-      const ease = (t) => t < 0 ? 0 : t > 1 ? 1 : (1 - Math.pow(1 - t, 3));
-      const p = ease(frac);
+  const ease = (t) => t < 0 ? 0 : t > 1 ? 1 : (1 - Math.pow(1 - t, 3));
+
+  const p = ease(frac);
       // draw current digit sliding down, and next digit coming from above (top -> bottom)
+      // discrete stacked mode: show multiple rows but only animate during change window
       ctx.globalAlpha = 1;
-      // apply gap by scaling the base positions
       const gapRows = opts && opts.gapRows ? opts.gapRows : 1;
       const rowSpace = digitHeight + (gapRows - 1) * (digitHeight * 0.15);
-      ctx.fillText(String(currentValue), 0, p * rowSpace);
-      ctx.fillText(String(nextValue), 0, (p - 1) * rowSpace);
-
-      // slight faded neighbors for context
-      ctx.globalAlpha = 0.25;
-      ctx.fillText(String((currentValue + 1) % 10), 0, (1 + p) * rowSpace);
-      ctx.fillText(String((currentValue + 9) % 10), 0, -(1 - p) * rowSpace);
+      // render a few rows around center; positions use rowSpace
+      const visibleRows = Math.ceil((ctx.canvas.height / rowSpace));
+      const half = Math.floor(visibleRows / 2);
+      const drawnYs = new Set();
+  for (let r = -half; r <= half; r++) {
+        // value mapping: above = current + |r|, below = current - r
+        let val = (currentValue - r) % 10;
+        val = (val + 10) % 10;
+        // base position using p for animation (p==0 means center at 0)
+        const animOffset = p * rowSpace;
+        const drawY = r * rowSpace + animOffset;
+        const roundedY = Math.round(drawY);
+        if (drawnYs.has(roundedY)) continue;
+        drawnYs.add(roundedY);
+        ctx.fillText(String(val), 0, drawY);
+      }
     }
 
     ctx.restore();
@@ -164,16 +187,13 @@
         nextValue = futureDigits[i];
       }
 
-      // For the last digit (seconds ones), render continuous with many stacked numbers and no gap
-      if (i === 5) {
-        // For continuous movement, compute a fractional offset within the second based on ms
-        const totalSecFrac = (ms / 1000) + (secs % 1);
-        // We'll compute fracContinuous as fraction of digit movement (0..1) within the second
-        const fracContinuous = (ms / 1000);
-        drawDigitColumn(ctx, x, centerY, digitWidth, digitHeight, columns[i], nextValue, fracContinuous, color, fontSize, { continuous: true, speedRowsPerSec: 1 });
+      // Only the last column (seconds ones) should be continuously scrolling.
+      if (i === columns.length - 1) {
+        const speed = (options && options.clock6Speed) || (options && options.speedRowsPerSec) || 2;
+        drawDigitColumn(ctx, x, centerY, digitWidth, digitHeight, columns[i], nextValue, ms / 1000, color, fontSize, { continuous: true, speedRowsPerSec: speed });
       } else {
-        // non-last digits: introduce a small gap (1 row by default)
-        drawDigitColumn(ctx, x, centerY, digitWidth, digitHeight, columns[i], nextValue, frac, color, fontSize, { gapRows: 2 });
+        // Non-last columns: discrete stacked mode, animate only during their change window using frac
+        drawDigitColumn(ctx, x, centerY, digitWidth, digitHeight, columns[i], nextValue, frac, color, fontSize, { continuous: false, gapRows: 1 });
       }
     }
 
