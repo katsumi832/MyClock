@@ -20,8 +20,51 @@
       </div>
 
       <div class="settings-group">
-        <label>Color:</label>
-        <span id="color-options"></span>
+        <label>Font Color:</label>
+        <div>
+          <select id="font-mode">
+            <option value="solid">Solid</option>
+            <option value="gradient">Gradient</option>
+            <option value="split">Split</option>
+          </select>
+        </div>
+        <div id="font-gradient-controls" class="gradient-controls hidden">
+          <input type="color" id="font-grad-c1">
+          <input type="color" id="font-grad-c2">
+          <select id="font-grad-pattern">
+            <option value="vertical">Vertical</option>
+            <option value="horizontal">Horizontal</option>
+            <option value="diag-tlbr">Diagonal TL→BR</option>
+            <option value="diag-bltr">Diagonal BL→TR</option>
+            <option value="split">Split (Half/Half)</option>
+            <option value="radial">Radial</option>
+          </select>
+        </div>
+        <div id="color-options"></div>
+      </div>
+
+      <div class="settings-group">
+        <label>Background Color:</label>
+        <div>
+          <select id="bg-mode">
+            <option value="solid">Solid</option>
+            <option value="gradient">Gradient</option>
+            <option value="split">Split</option>
+          </select>
+        </div>
+        <div id="bg-gradient-controls" class="gradient-controls hidden">
+          <input type="color" id="bg-grad-c1">
+          <input type="color" id="bg-grad-c2">
+          <select id="bg-grad-pattern">
+            <option value="vertical">Vertical</option>
+            <option value="horizontal">Horizontal</option>
+            <option value="diag-tlbr">Diagonal TL→BR</option>
+            <option value="diag-bltr">Diagonal BL→TR</option>
+            <option value="split">Split (Half/Half)</option>
+            <option value="radial">Radial</option>
+          </select>
+        </div>
+        <div id="bg-color-options"></div>
       </div>
 
       <div class="settings-group">
@@ -31,10 +74,7 @@
         <button id="size-plus">＋</button>
       </div>
 
-      <div class="settings-group">
-        <label>Mode:</label>
-        <button id="mode-toggle">Dark Mode</button>
-      </div>
+      <!-- Mode toggle removed per user request -->
 
       <button id="apply-btn">Confirm Change</button>
       <!-- Back + Warning are injected by JS -->

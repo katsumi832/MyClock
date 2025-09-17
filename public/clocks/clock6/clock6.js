@@ -172,9 +172,43 @@
   const digitHeight = Math.floor(digitWidth * 1.8);
   const fontSize = Math.floor(digitWidth * 1.15);
 
+    // helper to create gradients/patterns locally (supports split)
+    function makeLocalPaint(ctx, w, h, c1, c2, pattern) {
+      if (pattern === 'split') {
+        const tmp = document.createElement('canvas'); tmp.width = Math.max(1, Math.floor(w)); tmp.height = Math.max(1, Math.floor(h));
+        const tctx = tmp.getContext('2d');
+        tctx.fillStyle = c1; tctx.fillRect(0,0,Math.floor(tmp.width/2),tmp.height);
+        tctx.fillStyle = c2; tctx.fillRect(Math.floor(tmp.width/2),0,tmp.width-Math.floor(tmp.width/2),tmp.height);
+        return ctx.createPattern(tmp, 'no-repeat');
+      }
+      if (!pattern || pattern === 'vertical') {
+        const g = ctx.createLinearGradient(0,0,0,h);
+        g.addColorStop(0,c1); g.addColorStop(1,c2); return g;
+      }
+      if (pattern === 'horizontal') {
+        const g = ctx.createLinearGradient(0,0,w,0);
+        g.addColorStop(0,c1); g.addColorStop(1,c2); return g;
+      }
+      if (pattern === 'diag-tlbr') {
+        const g = ctx.createLinearGradient(0,0,w,h);
+        g.addColorStop(0,c1); g.addColorStop(1,c2); return g;
+      }
+      if (pattern === 'diag-bltr') {
+        const g = ctx.createLinearGradient(0,h,w,0);
+        g.addColorStop(0,c1); g.addColorStop(1,c2); return g;
+      }
+      const rg = ctx.createRadialGradient(w/2,h/2,1,w/2,h/2,Math.max(w,h));
+      rg.addColorStop(0,c1); rg.addColorStop(1,c2); return rg;
+    }
+
     // background
     ctx.clearRect(0, 0, w, h);
-    ctx.fillStyle = options.bg || '#000';
+    let bgPaint = options.bg || '#000';
+    if (options.bgGradient && Array.isArray(options.bgGradient)) {
+      const [c1,c2,pattern] = options.bgGradient;
+      bgPaint = makeLocalPaint(ctx,w,h,c1,c2,pattern);
+    }
+    ctx.fillStyle = bgPaint;
     ctx.fillRect(0, 0, w, h);
 
   // compute start x with tighter spacing within pairs (HH, MM, SS)
@@ -184,6 +218,13 @@
   const totalWidth = digitWidth * 6 + pairInnerGap * 3 + pairOuterGap * 2;
   const startX = (w - totalWidth) / 2 + digitWidth / 2;
     const centerY = h / 2;
+
+    // prepare font paint (may be descriptor object with .grad)
+    let fontPaint = color;
+    if (color && typeof color === 'object' && color.grad) {
+      const [c1,c2,pattern] = color.grad;
+      fontPaint = makeLocalPaint(ctx,w,h,c1,c2,pattern);
+    }
 
     for (let i = 0; i < columns.length; i++) {
       // map index to x with tighter pair spacing: indices 0-1 (H),2-3(M),4-5(S)
@@ -206,10 +247,10 @@
         nextValue = futureDigits[i];
       }
 
-      if (i === columns.length - 1) {
+    if (i === columns.length - 1) {
         // Last column (seconds ones) remains continuous (smooth ms-based scroll)
         const speed = (options && options.clock6Speed) || (options && options.speedRowsPerSec) || 1;
-  drawDigitColumn(ctx, x, centerY, digitWidth, digitHeight, columns[i], nextValue, timeUntil, color, fontSize, { continuous: true, speedRowsPerSec: speed, animWindowSec: animWindow, nowMs: nowMs });
+  drawDigitColumn(ctx, x, centerY, digitWidth, digitHeight, columns[i], nextValue, timeUntil, fontPaint, fontSize, { continuous: true, speedRowsPerSec: speed, animWindowSec: animWindow, nowMs: nowMs });
       } else {
         // Non-last columns: discrete stacked mode, animate only during their change window using timeUntil
         // Provide a domain for tens places so they only cycle through valid digits
@@ -217,7 +258,7 @@
         if (i === 0) domain = [0,1,2]; // hour tens
         else if (i === 2 || i === 4) domain = [0,1,2,3,4,5]; // minute tens, seconds tens
         else domain = [0,1,2,3,4,5,6,7,8,9];
-        drawDigitColumn(ctx, x, centerY, digitWidth, digitHeight, columns[i], nextValue, timeUntil, color, fontSize, { continuous: false, gapRows: 1, domain: domain, animWindowSec: animWindow, extraAbove: 6, extraBelow: 2 });
+        drawDigitColumn(ctx, x, centerY, digitWidth, digitHeight, columns[i], nextValue, timeUntil, fontPaint, fontSize, { continuous: false, gapRows: 1, domain: domain, animWindowSec: animWindow, extraAbove: 6, extraBelow: 2 });
       }
     }
 

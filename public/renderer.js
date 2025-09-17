@@ -26,12 +26,21 @@ const styleNextBtn = document.getElementById("clock-style-next");
 const styleLabel = document.getElementById("clock-style-label");
 
 const colorOptionsDiv = document.getElementById("color-options");
+const bgColorOptionsDiv = document.getElementById("bg-color-options");
+// gradient/split controls
+const fontModeSelect = document.getElementById('font-mode');
+const fontGradC1 = document.getElementById('font-grad-c1');
+const fontGradC2 = document.getElementById('font-grad-c2');
+const fontGradPattern = document.getElementById('font-grad-pattern');
+const bgModeSelect = document.getElementById('bg-mode');
+const bgGradC1 = document.getElementById('bg-grad-c1');
+const bgGradC2 = document.getElementById('bg-grad-c2');
+const bgGradPattern = document.getElementById('bg-grad-pattern');
 
 const sizeMinusBtn = document.getElementById("size-minus");
 const sizePlusBtn = document.getElementById("size-plus");
 const sizeLabel = document.getElementById("size-label");
 
-const modeToggleBtn = document.getElementById("mode-toggle");
 const applyBtn = document.getElementById("apply-btn");
 
 // (Preview removed from DOM) preview will render on the main canvas while settings are open
@@ -47,7 +56,11 @@ let editingSettings = {
   styleIndex: currentStyleIndex,
   color: "#00ff88",
   size: 180,
-  mode: "dark",
+  // font/bg modes: 'solid' | 'gradient' | 'split'
+  fontMode: 'solid',
+  fontGrad: ['#00ff88', '#ffffff', 'vertical'],
+  bgMode: 'solid',
+  bgGrad: ['#000000', '#071b14', 'vertical'],
   clock6Speed: 1,
 };
 
@@ -83,7 +96,77 @@ renderColorOptions();
 // Initialize labels to reflect current editingSettings
 styleLabel.textContent = clockStyles[editingSettings.styleIndex];
 sizeLabel.textContent = editingSettings.size;
-modeToggleBtn.textContent = editingSettings.mode === "dark" ? "Dark Mode" : "Light Mode";
+// gradient inputs init
+if (fontGradC1) fontGradC1.value = editingSettings.fontGrad[0];
+if (fontGradC2) fontGradC2.value = editingSettings.fontGrad[1];
+if (fontGradPattern) fontGradPattern.value = editingSettings.fontGrad[2];
+if (bgGradC1) bgGradC1.value = editingSettings.bgGrad[0];
+if (bgGradC2) bgGradC2.value = editingSettings.bgGrad[1];
+if (bgGradPattern) bgGradPattern.value = editingSettings.bgGrad[2];
+
+function renderBgOptions() {
+  bgColorOptionsDiv.innerHTML = "";
+  palette.forEach((c) => {
+    const div = document.createElement("div");
+    div.classList.add("bg-circle");
+    div.style.background = c;
+    if (c === editingSettings.bgGrad[0]) div.classList.add('selected');
+    div.addEventListener("click", () => {
+      editingSettings.bgGrad[0] = c;
+      renderBgOptions();
+      drawPreview();
+    });
+    bgColorOptionsDiv.appendChild(div);
+  });
+}
+renderBgOptions();
+
+function updateGradientUI() {
+  const fCtr = document.getElementById('font-gradient-controls');
+  const bCtr = document.getElementById('bg-gradient-controls');
+  if (fCtr) fCtr.classList.toggle('hidden', fontModeSelect && fontModeSelect.value === 'solid');
+  if (bCtr) bCtr.classList.toggle('hidden', bgModeSelect && bgModeSelect.value === 'solid');
+}
+if (fontModeSelect) fontModeSelect.addEventListener('change', (e)=>{ editingSettings.fontMode = e.target.value; updateGradientUI(); drawPreview(); });
+if (bgModeSelect) bgModeSelect.addEventListener('change', (e)=>{ editingSettings.bgMode = e.target.value; updateGradientUI(); drawPreview(); });
+if (fontGradC1) fontGradC1.addEventListener('input', (e)=>{ editingSettings.fontGrad[0]=e.target.value; drawPreview(); });
+if (fontGradC2) fontGradC2.addEventListener('input', (e)=>{ editingSettings.fontGrad[1]=e.target.value; drawPreview(); });
+if (fontGradPattern) fontGradPattern.addEventListener('change', (e)=>{ editingSettings.fontGrad[2]=e.target.value; drawPreview(); });
+if (bgGradC1) bgGradC1.addEventListener('input', (e)=>{ editingSettings.bgGrad[0]=e.target.value; drawPreview(); });
+if (bgGradC2) bgGradC2.addEventListener('input', (e)=>{ editingSettings.bgGrad[1]=e.target.value; drawPreview(); });
+if (bgGradPattern) bgGradPattern.addEventListener('change', (e)=>{ editingSettings.bgGrad[2]=e.target.value; drawPreview(); });
+updateGradientUI();
+
+// helper
+function makeGradient(ctx,w,h,c1,c2,pattern) {
+  if (pattern === 'split') {
+    // paint left half c1, right half c2 via a canvas pattern
+    const tmp = document.createElement('canvas'); tmp.width = w; tmp.height = h;
+    const tctx = tmp.getContext('2d');
+    tctx.fillStyle = c1; tctx.fillRect(0,0,Math.floor(w/2),h);
+    tctx.fillStyle = c2; tctx.fillRect(Math.floor(w/2),0,w-Math.floor(w/2),h);
+    return ctx.createPattern(tmp, 'no-repeat');
+  }
+  if (!pattern || pattern === 'vertical') {
+    const g = ctx.createLinearGradient(0,0,0,h);
+    g.addColorStop(0,c1); g.addColorStop(1,c2); return g;
+  }
+  if (pattern === 'horizontal') {
+    const g = ctx.createLinearGradient(0,0,w,0);
+    g.addColorStop(0,c1); g.addColorStop(1,c2); return g;
+  }
+  if (pattern === 'diag-tlbr') {
+    const g = ctx.createLinearGradient(0,0,w,h);
+    g.addColorStop(0,c1); g.addColorStop(1,c2); return g;
+  }
+  if (pattern === 'diag-bltr') {
+    const g = ctx.createLinearGradient(0,h,w,0);
+    g.addColorStop(0,c1); g.addColorStop(1,c2); return g;
+  }
+  // radial
+  const rg = ctx.createRadialGradient(w/2,h/2,1,w/2,h/2,Math.max(w,h));
+  rg.addColorStop(0,c1); rg.addColorStop(1,c2); return rg;
+}
 
 // ------------------
 // 時計描画関数
@@ -224,9 +307,8 @@ function drawBinary(ctx, w, h, color, size) {
 
 // Helper to decide background mode for a given context. Preview uses editingSettings, main uses appliedSettings
 function modeForContext(ctx) {
-  // If settings panel is open, preview uses editingSettings.mode
-  if (!settingsPanel.classList.contains("hidden")) return editingSettings.mode;
-  return appliedSettings.mode;
+  // Background/mode removed; default to dark aesthetics for contexts
+  return 'dark';
 }
 
 // ------------------
@@ -243,28 +325,38 @@ function renderClock() {
   const w = canvas.width;
   const h = canvas.height;
 
-  ctx.fillStyle = mode === "dark" ? "#000" : "#fff";
+  if (appliedSettings.bgMode === 'gradient' || appliedSettings.bgMode === 'split') {
+    ctx.fillStyle = makeGradient(ctx, w, h, appliedSettings.bgGrad[0], appliedSettings.bgGrad[1], appliedSettings.bgGrad[2]);
+  } else {
+    ctx.fillStyle = (appliedSettings.bgGrad && appliedSettings.bgGrad[0]) ? appliedSettings.bgGrad[0] : '#000';
+  }
   ctx.fillRect(0, 0, w, h);
   const style = clockStyles[styleIndex];
   if (style === "Clock 1") {
-    if (typeof window.renderClock1 === 'function') window.renderClock1(ctx,w,h,color,size,new Date(),{bg:mode==='dark'?'#000':'#fff'});
+    if (typeof window.renderClock1 === 'function') window.renderClock1(ctx,w,h,color,size,new Date(),{suppressBg:true});
     else lazyLoadClock(1);
   } else if (style === "Clock 2") {
-    if (typeof window.renderClock2 === 'function') window.renderClock2(ctx,w,h,color,size,new Date(),{bg:mode==='dark'?'#000':'#fff'});
+    if (typeof window.renderClock2 === 'function') window.renderClock2(ctx,w,h,color,size,new Date(),{suppressBg:true});
     else lazyLoadClock(2);
   } else if (style === "Clock 3") {
-    if (typeof window.renderClock3 === 'function') window.renderClock3(ctx,w,h,color,size,new Date(),{bg:mode==='dark'?'#000':'#fff'});
+    if (typeof window.renderClock3 === 'function') window.renderClock3(ctx,w,h,color,size,new Date(),{suppressBg:true});
     else lazyLoadClock(3);
   } else if (style === "Clock 4") {
-    if (typeof window.renderClock4 === 'function') window.renderClock4(ctx,w,h,color,size,new Date(),{bg:mode==='dark'?'#000':'#fff'});
+    if (typeof window.renderClock4 === 'function') window.renderClock4(ctx,w,h,color,size,new Date(),{suppressBg:true});
     else lazyLoadClock(4);
   } else if (style === "Clock 5") {
-    if (typeof window.renderClock5 === 'function') window.renderClock5(ctx,w,h,color,size,new Date(),{bg:mode==='dark'?'#000':'#fff'});
+    if (typeof window.renderClock5 === 'function') window.renderClock5(ctx,w,h,color,size,new Date(),{suppressBg:true});
     else lazyLoadClock(5);
   } else if (style === "Clock 6") {
     // lazy-load Clock 6 script once
     if (typeof window.renderClock6 === 'function') {
-      window.renderClock6(ctx, w, h, color, size, new Date(), { bg: mode === 'dark' ? '#000' : '#fff', clock6Speed: appliedSettings.clock6Speed });
+      let fontPaint = color;
+      if (appliedSettings.fontMode === 'gradient' || appliedSettings.fontMode === 'split') {
+        fontPaint = { grad: appliedSettings.fontGrad };
+      }
+      const bgArg = (appliedSettings.bgMode === 'solid') ? (appliedSettings.bgGrad && appliedSettings.bgGrad[0] ? appliedSettings.bgGrad[0] : '#000') : null;
+      const bgGradArg = (appliedSettings.bgMode === 'gradient' || appliedSettings.bgMode === 'split') ? appliedSettings.bgGrad : null;
+      window.renderClock6(ctx, w, h, fontPaint, size, new Date(), { bg: bgArg, bgGradient: bgGradArg, clock6Speed: appliedSettings.clock6Speed, suppressBg: true });
     } else if (!window._clock6ScriptLoading) {
       window._clock6ScriptLoading = true;
   const s = document.createElement('script');
@@ -290,7 +382,11 @@ function drawPreview() {
   const w = canvas.width;
   const h = canvas.height;
   // Render preview on main canvas
-  ctx.fillStyle = mode === "dark" ? "#000" : "#fff";
+  if (editingSettings.bgMode === 'gradient' || editingSettings.bgMode === 'split') {
+    ctx.fillStyle = makeGradient(ctx, w, h, editingSettings.bgGrad[0], editingSettings.bgGrad[1], editingSettings.bgGrad[2]);
+  } else {
+    ctx.fillStyle = editingSettings.bgGrad && editingSettings.bgGrad[0] ? editingSettings.bgGrad[0] : '#000';
+  }
   ctx.fillRect(0, 0, w, h);
 
   // Use the chosen `size` directly for preview so the clock doesn't shrink
@@ -298,23 +394,30 @@ function drawPreview() {
 
   const style = clockStyles[styleIndex];
   if (style === "Clock 1") {
-    if (typeof window.renderClock1 === 'function') window.renderClock1(ctx,w,h,color,previewSize,new Date(),{bg:mode==='dark'?'#000':'#fff'});
+    if (typeof window.renderClock1 === 'function') window.renderClock1(ctx,w,h,color,previewSize,new Date(),{suppressBg:true});
     else lazyLoadClock(1);
   } else if (style === "Clock 2") {
-    if (typeof window.renderClock2 === 'function') window.renderClock2(ctx,w,h,color,Math.round(previewSize*0.8),new Date(),{bg:mode==='dark'?'#000':'#fff'});
+    if (typeof window.renderClock2 === 'function') window.renderClock2(ctx,w,h,color,Math.round(previewSize*0.8),new Date(),{suppressBg:true});
     else lazyLoadClock(2);
   } else if (style === "Clock 3") {
-    if (typeof window.renderClock3 === 'function') window.renderClock3(ctx,w,h,color,previewSize,new Date(),{bg:mode==='dark'?'#000':'#fff'});
+    if (typeof window.renderClock3 === 'function') window.renderClock3(ctx,w,h,color,previewSize,new Date(),{suppressBg:true});
     else lazyLoadClock(3);
   } else if (style === "Clock 4") {
-    if (typeof window.renderClock4 === 'function') window.renderClock4(ctx,w,h,color,previewSize,new Date(),{bg:mode==='dark'?'#000':'#fff'});
+    if (typeof window.renderClock4 === 'function') window.renderClock4(ctx,w,h,color,previewSize,new Date(),{suppressBg:true});
     else lazyLoadClock(4);
   } else if (style === "Clock 5") {
-    if (typeof window.renderClock5 === 'function') window.renderClock5(ctx,w,h,color,previewSize,new Date(),{bg:mode==='dark'?'#000':'#fff'});
+    if (typeof window.renderClock5 === 'function') window.renderClock5(ctx,w,h,color,previewSize,new Date(),{suppressBg:true});
     else lazyLoadClock(5);
   } else if (style === "Clock 6") {
     if (typeof window.renderClock6 === 'function') {
-      window.renderClock6(ctx, w, h, color, size, new Date(), { bg: mode === 'dark' ? '#000' : '#fff', clock6Speed: editingSettings.clock6Speed });
+      // prepare font paint
+      let fontPaint = color;
+      if (editingSettings.fontMode === 'gradient' || editingSettings.fontMode === 'split') {
+        fontPaint = { grad: editingSettings.fontGrad };
+      }
+      const bgArg = (editingSettings.bgMode === 'solid') ? (editingSettings.bgGrad && editingSettings.bgGrad[0] ? editingSettings.bgGrad[0] : '#000') : null;
+      const bgGradArg = (editingSettings.bgMode === 'gradient' || editingSettings.bgMode === 'split') ? editingSettings.bgGrad : null;
+      window.renderClock6(ctx, w, h, fontPaint, size, new Date(), { bg: bgArg, bgGradient: bgGradArg, clock6Speed: editingSettings.clock6Speed, suppressBg: true });
     }
   }
 }
@@ -397,17 +500,11 @@ sizePlusBtn.addEventListener("click", () => {
   drawPreview();
 });
 
-// ダーク/ライトモード
-modeToggleBtn.addEventListener("click", () => {
-  editingSettings.mode = editingSettings.mode === "dark" ? "light" : "dark";
-  modeToggleBtn.textContent =
-    editingSettings.mode === "dark" ? "Dark Mode" : "Light Mode";
-  drawPreview();
-});
+// mode toggle removed
 
 // Confirm Change
 applyBtn.addEventListener("click", () => {
-  appliedSettings = { ...editingSettings };
+  appliedSettings = { ...editingSettings, fontMode: editingSettings.fontMode, fontGrad: editingSettings.fontGrad, bgMode: editingSettings.bgMode, bgGrad: editingSettings.bgGrad };
   settingsPanel.classList.add("hidden");
   // Show settings button and start 5s timer to hide
   settingsBtn.style.opacity = "1";
