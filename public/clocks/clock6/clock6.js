@@ -12,11 +12,11 @@
     ctx.font = `700 ${fontSize}px monospace`;
 
     if (opts && opts.continuous) {
-      // continuous scrolling: render many stacked numbers with no gap, moving at constant rows/sec
-      // determine rows/sec: prefer opts.speedRowsPerSec, otherwise use sensible default (slower)
+    // continuous scrolling: render many stacked numbers with no gap, moving at constant rows/sec
+    // determine rows/sec: prefer opts.speedRowsPerSec, otherwise use sensible default (slower)
   const rowsPerSec = (opts && opts.speedRowsPerSec) || 1;
-      const nowMs = Date.now();
-      const absoluteOffsetRows = (nowMs / 1000.0) * rowsPerSec;
+    const nowMs = (opts && opts.nowMs) || Date.now();
+    const absoluteOffsetRows = (nowMs / 1000.0) * rowsPerSec;
       const centerRowIndex = Math.floor(absoluteOffsetRows);
       // fractional offset within the current row (0..1)
       const fracRow = absoluteOffsetRows - centerRowIndex;
@@ -34,9 +34,9 @@
         val = (val + 10) % 10;
         const drawY = r * digitHeight + offset;
         // avoid drawing two digits at the same rounded Y position
-        const roundedY = Math.round(drawY);
-        if (drawnYs.has(roundedY)) continue;
-        drawnYs.add(roundedY);
+  const roundedY = Math.round(drawY * 100) / 100;
+  if (drawnYs.has(roundedY)) continue;
+  drawnYs.add(roundedY);
         ctx.globalAlpha = 1;
         ctx.fillText(String(val), 0, drawY);
       }
@@ -74,9 +74,9 @@
         const idx = ((centerIndex - r) % domainLen + domainLen) % domainLen;
         const val = domain[idx];
         const drawY = r * rowSpace + animOffset;
-        const roundedY = Math.round(drawY);
-        if (drawnYs.has(roundedY)) continue;
-        drawnYs.add(roundedY);
+  const roundedY = Math.round(drawY * 100) / 100;
+  if (drawnYs.has(roundedY)) continue;
+  drawnYs.add(roundedY);
         ctx.fillText(String(val), 0, drawY);
       }
     }
@@ -209,7 +209,7 @@
       if (i === columns.length - 1) {
         // Last column (seconds ones) remains continuous (smooth ms-based scroll)
         const speed = (options && options.clock6Speed) || (options && options.speedRowsPerSec) || 1;
-        drawDigitColumn(ctx, x, centerY, digitWidth, digitHeight, columns[i], nextValue, timeUntil, color, fontSize, { continuous: true, speedRowsPerSec: speed, animWindowSec: animWindow });
+  drawDigitColumn(ctx, x, centerY, digitWidth, digitHeight, columns[i], nextValue, timeUntil, color, fontSize, { continuous: true, speedRowsPerSec: speed, animWindowSec: animWindow, nowMs: nowMs });
       } else {
         // Non-last columns: discrete stacked mode, animate only during their change window using timeUntil
         // Provide a domain for tens places so they only cycle through valid digits
