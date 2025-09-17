@@ -21,12 +21,8 @@
 
       <div class="settings-group">
         <label>Font Color:</label>
-        <div>
-          <select id="font-mode">
-            <option value="solid">Solid</option>
-            <option value="gradient">Gradient</option>
-            <option value="split">Split</option>
-          </select>
+        <div style="display:none;">
+          <!-- font mode selector removed; half-swatch controls gradient editing -->
         </div>
         <div id="font-gradient-controls" class="gradient-controls hidden">
           <input type="color" id="font-grad-c1">
@@ -36,22 +32,18 @@
             <option value="horizontal">Horizontal</option>
             <option value="diag-tlbr">Diagonal TL→BR</option>
             <option value="diag-bltr">Diagonal BL→TR</option>
-            <option value="split">Split (Half/Half)</option>
             <option value="radial">Radial</option>
           </select>
         </div>
         <div id="color-options"></div>
+        <div id="font-special-swatches" style="margin-top:8px;">
+          <!-- half-swatch shows two colors split in a circle; clicking activates gradient editing for font -->
+          <button id="font-half-swatch" title="Half / Half font color" style="border:none;background:transparent;cursor:pointer;padding:0;margin-left:6px;"></button>
+        </div>
       </div>
 
       <div class="settings-group">
         <label>Background Color:</label>
-        <div>
-          <select id="bg-mode">
-            <option value="solid">Solid</option>
-            <option value="gradient">Gradient</option>
-            <option value="split">Split</option>
-          </select>
-        </div>
         <div id="bg-gradient-controls" class="gradient-controls hidden">
           <input type="color" id="bg-grad-c1">
           <input type="color" id="bg-grad-c2">
@@ -65,6 +57,9 @@
           </select>
         </div>
         <div id="bg-color-options"></div>
+        <div id="bg-special-swatches" style="margin-top:8px;">
+          <button id="bg-half-swatch" title="Half / Half background color" style="border:none;background:transparent;cursor:pointer;padding:0;margin-left:6px;"></button>
+        </div>
       </div>
 
       <div class="settings-group">

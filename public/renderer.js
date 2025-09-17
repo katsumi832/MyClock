@@ -27,12 +27,10 @@ const styleLabel = document.getElementById("clock-style-label");
 
 const colorOptionsDiv = document.getElementById("color-options");
 const bgColorOptionsDiv = document.getElementById("bg-color-options");
-// gradient/split controls
-const fontModeSelect = document.getElementById('font-mode');
+// gradient controls
 const fontGradC1 = document.getElementById('font-grad-c1');
 const fontGradC2 = document.getElementById('font-grad-c2');
 const fontGradPattern = document.getElementById('font-grad-pattern');
-const bgModeSelect = document.getElementById('bg-mode');
 const bgGradC1 = document.getElementById('bg-grad-c1');
 const bgGradC2 = document.getElementById('bg-grad-c2');
 const bgGradPattern = document.getElementById('bg-grad-pattern');
@@ -92,6 +90,8 @@ function renderColorOptions() {
   });
 }
 renderColorOptions();
+// update font half-swatch when palette changes
+renderFontHalfSwatch();
 
 // Initialize labels to reflect current editingSettings
 styleLabel.textContent = clockStyles[editingSettings.styleIndex];
@@ -120,22 +120,77 @@ function renderBgOptions() {
   });
 }
 renderBgOptions();
+// update bg half-swatch when palette changes
+renderBgHalfSwatch();
+
+// Render the half-swatch button for background special swatch
+function renderBgHalfSwatch() {
+  const btn = document.getElementById('bg-half-swatch');
+  if (!btn) return;
+  const c = document.createElement('canvas'); c.width = 40; c.height = 40;
+  const t = c.getContext('2d');
+  const [c1,c2,pat] = editingSettings.bgGrad || ['#000000','#071b14','vertical'];
+  // draw left half
+  t.beginPath(); t.moveTo(20,20); t.arc(20,20,18,Math.PI/2,Math.PI*3/2); t.closePath(); t.fillStyle = c1; t.fill();
+  // draw right half
+  t.beginPath(); t.moveTo(20,20); t.arc(20,20,18,Math.PI*3/2,Math.PI/2); t.closePath(); t.fillStyle = c2; t.fill();
+  btn.style.backgroundImage = `url(${c.toDataURL()})`;
+  btn.classList.toggle('selected', editingSettings.bgMode === 'gradient');
+  btn.onclick = () => {
+    // activate background gradient editing and ensure bgMode=gradient
+    editingSettings.bgMode = 'gradient';
+    if (!editingSettings.bgGrad || editingSettings.bgGrad.length < 2) editingSettings.bgGrad = [editingSettings.bgGrad && editingSettings.bgGrad[0] ? editingSettings.bgGrad[0] : '#000','#071b14','vertical'];
+    const bCtr = document.getElementById('bg-gradient-controls'); if (bCtr) bCtr.classList.remove('hidden');
+    renderBgHalfSwatch();
+    drawPreview();
+  };
+}
+renderBgHalfSwatch();
 
 function updateGradientUI() {
   const fCtr = document.getElementById('font-gradient-controls');
   const bCtr = document.getElementById('bg-gradient-controls');
-  if (fCtr) fCtr.classList.toggle('hidden', fontModeSelect && fontModeSelect.value === 'solid');
-  if (bCtr) bCtr.classList.toggle('hidden', bgModeSelect && bgModeSelect.value === 'solid');
+  if (fCtr) fCtr.classList.toggle('hidden', editingSettings.fontMode !== 'gradient');
+  if (bCtr) bCtr.classList.toggle('hidden', editingSettings.bgMode !== 'gradient');
 }
-if (fontModeSelect) fontModeSelect.addEventListener('change', (e)=>{ editingSettings.fontMode = e.target.value; updateGradientUI(); drawPreview(); });
-if (bgModeSelect) bgModeSelect.addEventListener('change', (e)=>{ editingSettings.bgMode = e.target.value; updateGradientUI(); drawPreview(); });
+// gradient controls are only shown when user activates a half-swatch
 if (fontGradC1) fontGradC1.addEventListener('input', (e)=>{ editingSettings.fontGrad[0]=e.target.value; drawPreview(); });
 if (fontGradC2) fontGradC2.addEventListener('input', (e)=>{ editingSettings.fontGrad[1]=e.target.value; drawPreview(); });
 if (fontGradPattern) fontGradPattern.addEventListener('change', (e)=>{ editingSettings.fontGrad[2]=e.target.value; drawPreview(); });
 if (bgGradC1) bgGradC1.addEventListener('input', (e)=>{ editingSettings.bgGrad[0]=e.target.value; drawPreview(); });
 if (bgGradC2) bgGradC2.addEventListener('input', (e)=>{ editingSettings.bgGrad[1]=e.target.value; drawPreview(); });
 if (bgGradPattern) bgGradPattern.addEventListener('change', (e)=>{ editingSettings.bgGrad[2]=e.target.value; drawPreview(); });
+// keep gradient controls hidden by default; they will be shown when user clicks half-swatch
+// initialize gradient control visibility
 updateGradientUI();
+
+// Render the half-swatch button for font special swatch
+function renderFontHalfSwatch() {
+  const btn = document.getElementById('font-half-swatch');
+  if (!btn) return;
+  // create a small canvas to draw half/half circle
+  const c = document.createElement('canvas'); c.width = 40; c.height = 40;
+  const t = c.getContext('2d');
+  const [c1,c2,pat] = editingSettings.fontGrad || ['#00ff88','#ffffff','vertical'];
+  // draw left half
+  t.beginPath(); t.moveTo(20,20); t.arc(20,20,18,Math.PI/2,Math.PI*3/2); t.closePath(); t.fillStyle = c1; t.fill();
+  // draw right half
+  t.beginPath(); t.moveTo(20,20); t.arc(20,20,18,Math.PI*3/2,Math.PI/2); t.closePath(); t.fillStyle = c2; t.fill();
+  btn.style.width = '40px'; btn.style.height = '40px'; btn.style.borderRadius = '50%';
+  btn.style.backgroundImage = `url(${c.toDataURL()})`;
+  btn.classList.toggle('selected', editingSettings.fontMode === 'gradient');
+  btn.onclick = () => {
+    // activate font gradient editing and ensure fontMode=gradient
+    editingSettings.fontMode = 'gradient';
+    // ensure fontGrad has two colors; if not, initialize
+    if (!editingSettings.fontGrad || editingSettings.fontGrad.length < 2) editingSettings.fontGrad = [editingSettings.color || '#00ff88','#ffffff','vertical'];
+    // open gradient UI
+    const fCtr = document.getElementById('font-gradient-controls'); if (fCtr) fCtr.classList.remove('hidden');
+    renderFontHalfSwatch();
+    drawPreview();
+  };
+}
+renderFontHalfSwatch();
 
 // helper
 function makeGradient(ctx,w,h,c1,c2,pattern) {
@@ -351,11 +406,11 @@ function renderClock() {
     // lazy-load Clock 6 script once
     if (typeof window.renderClock6 === 'function') {
       let fontPaint = color;
-      if (appliedSettings.fontMode === 'gradient' || appliedSettings.fontMode === 'split') {
+      if (appliedSettings.fontMode === 'gradient') {
         fontPaint = { grad: appliedSettings.fontGrad };
       }
       const bgArg = (appliedSettings.bgMode === 'solid') ? (appliedSettings.bgGrad && appliedSettings.bgGrad[0] ? appliedSettings.bgGrad[0] : '#000') : null;
-      const bgGradArg = (appliedSettings.bgMode === 'gradient' || appliedSettings.bgMode === 'split') ? appliedSettings.bgGrad : null;
+  const bgGradArg = (appliedSettings.bgMode === 'gradient' || appliedSettings.bgMode === 'split') ? appliedSettings.bgGrad : null;
       window.renderClock6(ctx, w, h, fontPaint, size, new Date(), { bg: bgArg, bgGradient: bgGradArg, clock6Speed: appliedSettings.clock6Speed, suppressBg: true });
     } else if (!window._clock6ScriptLoading) {
       window._clock6ScriptLoading = true;
@@ -412,11 +467,11 @@ function drawPreview() {
     if (typeof window.renderClock6 === 'function') {
       // prepare font paint
       let fontPaint = color;
-      if (editingSettings.fontMode === 'gradient' || editingSettings.fontMode === 'split') {
+      if (editingSettings.fontMode === 'gradient') {
         fontPaint = { grad: editingSettings.fontGrad };
       }
       const bgArg = (editingSettings.bgMode === 'solid') ? (editingSettings.bgGrad && editingSettings.bgGrad[0] ? editingSettings.bgGrad[0] : '#000') : null;
-      const bgGradArg = (editingSettings.bgMode === 'gradient' || editingSettings.bgMode === 'split') ? editingSettings.bgGrad : null;
+  const bgGradArg = (editingSettings.bgMode === 'gradient' || editingSettings.bgMode === 'split') ? editingSettings.bgGrad : null;
       window.renderClock6(ctx, w, h, fontPaint, size, new Date(), { bg: bgArg, bgGradient: bgGradArg, clock6Speed: editingSettings.clock6Speed, suppressBg: true });
     }
   }
