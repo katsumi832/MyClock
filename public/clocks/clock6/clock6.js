@@ -54,10 +54,18 @@
       const visibleRows = Math.ceil((ctx.canvas.height / rowSpace));
       const half = Math.floor(visibleRows / 2);
       const drawnYs = new Set();
+
+      // Domain-aware digit list (for tens places). If opts.domain provided, use it.
+      const domain = (opts && Array.isArray(opts.domain) && opts.domain.length) ? opts.domain.slice() : [0,1,2,3,4,5,6,7,8,9];
+      const domainLen = domain.length;
+      // find index of currentValue in domain; fallback to numeric mapping
+      let centerIndex = domain.indexOf(currentValue);
+      if (centerIndex === -1) centerIndex = ((currentValue % domainLen) + domainLen) % domainLen;
+
       for (let r = -half; r <= half; r++) {
-        // value mapping: above = current + |r|, below = current - r
-        let val = (currentValue - r) % 10;
-        val = (val + 10) % 10;
+        // value mapping within domain: take domain index offset from centerIndex
+        const idx = ((centerIndex - r) % domainLen + domainLen) % domainLen;
+        const val = domain[idx];
         // base position using p for animation (p==0 means center at 0)
         const animOffset = p * rowSpace;
         const drawY = r * rowSpace + animOffset;
@@ -193,13 +201,18 @@
         nextValue = futureDigits[i];
       }
 
-      // Only the last column (seconds ones) should be continuously scrolling.
       if (i === columns.length - 1) {
+        // Last column (seconds ones) remains continuous (smooth ms-based scroll)
         const speed = (options && options.clock6Speed) || (options && options.speedRowsPerSec) || 1;
         drawDigitColumn(ctx, x, centerY, digitWidth, digitHeight, columns[i], nextValue, ms / 1000, color, fontSize, { continuous: true, speedRowsPerSec: speed });
       } else {
         // Non-last columns: discrete stacked mode, animate only during their change window using frac
-        drawDigitColumn(ctx, x, centerY, digitWidth, digitHeight, columns[i], nextValue, frac, color, fontSize, { continuous: false, gapRows: 1 });
+        // Provide a domain for tens places so they only cycle through valid digits
+        let domain = null;
+        if (i === 0) domain = [0,1,2]; // hour tens
+        else if (i === 2 || i === 4) domain = [0,1,2,3,4,5]; // minute tens, seconds tens
+        else domain = [0,1,2,3,4,5,6,7,8,9];
+        drawDigitColumn(ctx, x, centerY, digitWidth, digitHeight, columns[i], nextValue, frac, color, fontSize, { continuous: false, gapRows: 1, domain: domain });
       }
     }
 
