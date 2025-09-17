@@ -161,11 +161,11 @@
     hTensDate.setMilliseconds(0);
     tToNext[0] = secondsUntil(hTensDate);
 
-    // compute digit sizes
-    const totalGap = gap * (columns.length - 1) + padding * 2;
-    const digitWidth = Math.min(80, Math.floor((w - totalGap) / columns.length));
-    const digitHeight = Math.floor(digitWidth * 1.6);
-    const fontSize = Math.floor(digitWidth * 0.9);
+  // compute digit sizes (slightly larger)
+  const totalGap = gap * (columns.length - 1) + padding * 2;
+  const digitWidth = Math.min(120, Math.floor((w - totalGap) / columns.length));
+  const digitHeight = Math.floor(digitWidth * 1.8);
+  const fontSize = Math.floor(digitWidth * 1.15);
 
     // background
     ctx.clearRect(0, 0, w, h);
