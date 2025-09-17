@@ -1,6 +1,6 @@
-// vertical.js
-// Vertical rolling digits clock implementation
-// Exposes function: renderVerticalClock(ctx, w, h, color, size, now, options)
+// clock6.js (vertical renderer)
+// Clock 6 — vertical rolling digits clock implementation
+// Exposes function: renderClock6(ctx, w, h, color, size, now, options)
 (function(global){
   function drawDigitColumn(ctx, x, y, digitWidth, digitHeight, currentValue, nextValue, frac, color, fontSize, opts) {
     // opts: { gapRows: number, continuous: bool, speedRowsPerSec: number }
@@ -30,7 +30,12 @@
         // r<0 -> above center -> value = centerDigit + |r|
         // r==0 -> centerDigit
         // r>0 -> below center -> value = centerDigit - r
-        let val = (centerDigit - r) % 10;
+        let val;
+        if (opts && opts.freezeSame) {
+          val = centerDigit;
+        } else {
+          val = (centerDigit - r) % 10;
+        }
         val = (val + 10) % 10;
         const drawY = r * digitHeight + offset;
         // avoid drawing two digits at the same rounded Y position
@@ -189,8 +194,8 @@
 
       // Only the last column (seconds ones) should be continuously scrolling.
       if (i === columns.length - 1) {
-        const speed = (options && options.clock6Speed) || (options && options.speedRowsPerSec) || 2;
-        drawDigitColumn(ctx, x, centerY, digitWidth, digitHeight, columns[i], nextValue, ms / 1000, color, fontSize, { continuous: true, speedRowsPerSec: speed });
+  const speed = (options && options.clock6Speed) || (options && options.speedRowsPerSec) || 2;
+  drawDigitColumn(ctx, x, centerY, digitWidth, digitHeight, columns[i], nextValue, ms / 1000, color, fontSize, { continuous: true, speedRowsPerSec: speed, freezeSame: true });
       } else {
         // Non-last columns: discrete stacked mode, animate only during their change window using frac
         drawDigitColumn(ctx, x, centerY, digitWidth, digitHeight, columns[i], nextValue, frac, color, fontSize, { continuous: false, gapRows: 1 });
@@ -211,6 +216,6 @@
     ctx.fillText(':', colonX2, centerY);
   }
 
-  // expose
-  global.renderVerticalClock = renderVerticalClock;
+  // expose as renderClock6 for consistent naming
+  global.renderClock6 = renderVerticalClock;
 })(this);

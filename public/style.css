@@ -105,8 +105,8 @@ canvas {
   box-shadow: 0 0 0 2px #2196f3;
 }
 
-/* Vertical clock helper styles (preview/main rely on canvas drawing) */
-.vertical-digit {
+/* Clock 6 helper styles (preview/main rely on canvas drawing) */
+.clock6-digit {
   font-family: monospace;
 }
 

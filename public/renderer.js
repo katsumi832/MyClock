@@ -262,14 +262,14 @@ function renderClock() {
     if (typeof window.renderClock5 === 'function') window.renderClock5(ctx,w,h,color,size,new Date(),{bg:mode==='dark'?'#000':'#fff'});
     else lazyLoadClock(5);
   } else if (style === "Clock 6") {
-    // lazy-load vertical clock script once
-    if (typeof window.renderVerticalClock === 'function') {
-  window.renderVerticalClock(ctx, w, h, color, size, new Date(), { bg: mode === 'dark' ? '#000' : '#fff', speeds: { all: appliedSettings.clock6Speed } });
-    } else if (!window._verticalScriptLoading) {
-      window._verticalScriptLoading = true;
+    // lazy-load Clock 6 script once
+    if (typeof window.renderClock6 === 'function') {
+      window.renderClock6(ctx, w, h, color, size, new Date(), { bg: mode === 'dark' ? '#000' : '#fff', clock6Speed: appliedSettings.clock6Speed });
+    } else if (!window._clock6ScriptLoading) {
+      window._clock6ScriptLoading = true;
       const s = document.createElement('script');
       s.src = 'clocks/vertical/vertical.js';
-      s.onload = () => { window._verticalScriptLoaded = true; };
+      s.onload = () => { window._clock6ScriptLoaded = true; };
       document.body.appendChild(s);
     }
   }
@@ -313,8 +313,8 @@ function drawPreview() {
     if (typeof window.renderClock5 === 'function') window.renderClock5(ctx,w,h,color,previewSize,new Date(),{bg:mode==='dark'?'#000':'#fff'});
     else lazyLoadClock(5);
   } else if (style === "Clock 6") {
-    if (typeof window.renderVerticalClock === 'function') {
-      window.renderVerticalClock(ctx, w, h, color, size, new Date(), { bg: mode === 'dark' ? '#000' : '#fff', speeds: { all: editingSettings.clock6Speed } });
+    if (typeof window.renderClock6 === 'function') {
+      window.renderClock6(ctx, w, h, color, size, new Date(), { bg: mode === 'dark' ? '#000' : '#fff', clock6Speed: editingSettings.clock6Speed });
     }
   }
 }
