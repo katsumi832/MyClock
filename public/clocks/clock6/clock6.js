@@ -221,18 +221,17 @@
       }
     }
 
-    // draw colon separators between HH:MM:SS (between col 1&2 and 3&4)
-    ctx.fillStyle = color;
-    ctx.font = `700 ${Math.floor(fontSize * 0.6)}px monospace`;
-    const colonOffset = digitWidth / 2 + gap / 2;
-    const colonX1 = startX + (1 * (digitWidth + gap)) + digitWidth / 2 + gap / 2;
-    const colonX2 = startX + (3 * (digitWidth + gap)) + digitWidth / 2 + gap / 2;
-    const dotGap = Math.max(6, Math.floor(digitHeight * 0.18));
-    // draw two stacked dots
-    ctx.textAlign = 'center';
-    ctx.textBaseline = 'middle';
-    ctx.fillText(':', colonX1, centerY);
-    ctx.fillText(':', colonX2, centerY);
+  // draw colon separators between HH:MM:SS as exact midpoints between pairs
+  ctx.fillStyle = color;
+  ctx.font = `700 ${Math.floor(fontSize * 0.6)}px monospace`;
+  // helper to compute the x position used earlier for a given digit index
+  const xForIndex = (i) => startX + Math.floor(i / 2) * (digitWidth * 2 + pairInnerGap + pairOuterGap) + (i % 2) * (digitWidth + pairInnerGap);
+  const colonX1 = (xForIndex(1) + xForIndex(2)) / 2;
+  const colonX2 = (xForIndex(3) + xForIndex(4)) / 2;
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.fillText(':', colonX1, centerY);
+  ctx.fillText(':', colonX2, centerY);
   }
 
   // expose as renderClock6 for consistent naming
