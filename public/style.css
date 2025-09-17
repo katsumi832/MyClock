@@ -49,18 +49,18 @@ canvas {
 #settings-panel {
   backdrop-filter: blur(16px);
   background: rgba(255,255,255,0.95);
-  border-radius: 24px;
-  max-width: 640px;
-  min-width: 520px;
-  width: 36vw;
-  padding: 36px;
+  border-radius: 20px;
+  max-width: 480px;
+  min-width: 360px;
+  width: 28vw;
+  padding: 20px;
   position: absolute;
-  top: 60px;
+  top: 72px;
   right: 48px;
   color: #222;
   z-index: 100;
-  font-size: 1.1rem;
-  box-shadow: 0 12px 48px rgba(0,0,0,0.22);
+  font-size: 1rem;
+  box-shadow: 0 10px 30px rgba(0,0,0,0.18);
   pointer-events: auto;
 }
 .hidden {

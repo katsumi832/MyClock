@@ -39,7 +39,7 @@ const applyBtn = document.getElementById("apply-btn");
 // ------------------
 // 時計スタイル
 // ------------------
-const clockStyles = ["Digital", "Analog", "Minimal", "Dots", "Binary", "Vertical"];
+const clockStyles = ["Clock 1", "Clock 2", "Clock 3", "Clock 4", "Clock 5", "Vertical"];
 let currentStyleIndex = 0;
 
 // 選択状態（未保存の編集）
@@ -236,12 +236,22 @@ function renderClock() {
   ctx.fillStyle = mode === "dark" ? "#000" : "#fff";
   ctx.fillRect(0, 0, w, h);
   const style = clockStyles[styleIndex];
-  if (style === "Digital") drawDigital(ctx, w, h, color, size);
-  else if (style === "Analog") drawAnalog(ctx, w, h, color, size);
-  else if (style === "Minimal") drawMinimal(ctx, w, h, color, size);
-  else if (style === "Dots") drawDots(ctx, w, h, color, size);
-  else if (style === "Binary") drawBinary(ctx, w, h, color, size);
-  else if (style === "Vertical") {
+  if (style === "Clock 1") {
+    if (typeof window.renderClock1 === 'function') window.renderClock1(ctx,w,h,color,size,new Date(),{bg:mode==='dark'?'#000':'#fff'});
+    else lazyLoadClock(1);
+  } else if (style === "Clock 2") {
+    if (typeof window.renderClock2 === 'function') window.renderClock2(ctx,w,h,color,size,new Date(),{bg:mode==='dark'?'#000':'#fff'});
+    else lazyLoadClock(2);
+  } else if (style === "Clock 3") {
+    if (typeof window.renderClock3 === 'function') window.renderClock3(ctx,w,h,color,size,new Date(),{bg:mode==='dark'?'#000':'#fff'});
+    else lazyLoadClock(3);
+  } else if (style === "Clock 4") {
+    if (typeof window.renderClock4 === 'function') window.renderClock4(ctx,w,h,color,size,new Date(),{bg:mode==='dark'?'#000':'#fff'});
+    else lazyLoadClock(4);
+  } else if (style === "Clock 5") {
+    if (typeof window.renderClock5 === 'function') window.renderClock5(ctx,w,h,color,size,new Date(),{bg:mode==='dark'?'#000':'#fff'});
+    else lazyLoadClock(5);
+  } else if (style === "Vertical") {
     // lazy-load vertical clock script once
     if (typeof window.renderVerticalClock === 'function') {
       window.renderVerticalClock(ctx, w, h, color, size, new Date(), { bg: mode === 'dark' ? '#000' : '#fff' });
@@ -253,6 +263,16 @@ function renderClock() {
       document.body.appendChild(s);
     }
   }
+}
+
+function lazyLoadClock(n) {
+  const key = `_clock${n}Loading`;
+  if (window[key]) return;
+  window[key] = true;
+  const s = document.createElement('script');
+  s.src = `clocks/clock${n}/${n===1? 'digital' : n===2? 'analog' : n===3? 'minimal' : n===4? 'dots' : 'binary'}.js`;
+  s.onload = () => { /* loaded */ };
+  document.body.appendChild(s);
 }
 
 function drawPreview() {
@@ -267,12 +287,22 @@ function drawPreview() {
   const previewSize = Math.max(20, Math.min( Math.round(size * 0.5), Math.floor(Math.min(w, h) * 0.5) ));
 
   const style = clockStyles[styleIndex];
-  if (style === "Digital") drawDigital(ctx, w, h, color, previewSize);
-  else if (style === "Analog") drawAnalog(ctx, w, h, color, Math.round(previewSize * 0.8));
-  else if (style === "Minimal") drawMinimal(ctx, w, h, color, previewSize);
-  else if (style === "Dots") drawDots(ctx, w, h, color, previewSize);
-  else if (style === "Binary") drawBinary(ctx, w, h, color, previewSize);
-  else if (style === "Vertical") {
+  if (style === "Clock 1") {
+    if (typeof window.renderClock1 === 'function') window.renderClock1(ctx,w,h,color,previewSize,new Date(),{bg:mode==='dark'?'#000':'#fff'});
+    else lazyLoadClock(1);
+  } else if (style === "Clock 2") {
+    if (typeof window.renderClock2 === 'function') window.renderClock2(ctx,w,h,color,Math.round(previewSize*0.8),new Date(),{bg:mode==='dark'?'#000':'#fff'});
+    else lazyLoadClock(2);
+  } else if (style === "Clock 3") {
+    if (typeof window.renderClock3 === 'function') window.renderClock3(ctx,w,h,color,previewSize,new Date(),{bg:mode==='dark'?'#000':'#fff'});
+    else lazyLoadClock(3);
+  } else if (style === "Clock 4") {
+    if (typeof window.renderClock4 === 'function') window.renderClock4(ctx,w,h,color,previewSize,new Date(),{bg:mode==='dark'?'#000':'#fff'});
+    else lazyLoadClock(4);
+  } else if (style === "Clock 5") {
+    if (typeof window.renderClock5 === 'function') window.renderClock5(ctx,w,h,color,previewSize,new Date(),{bg:mode==='dark'?'#000':'#fff'});
+    else lazyLoadClock(5);
+  } else if (style === "Vertical") {
     if (typeof window.renderVerticalClock === 'function') {
       window.renderVerticalClock(ctx, w, h, color, size, new Date(), { bg: mode === 'dark' ? '#000' : '#fff' });
     }
