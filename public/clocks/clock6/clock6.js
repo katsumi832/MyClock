@@ -2,7 +2,7 @@
 // Clock 6 — vertical rolling digits clock implementation
 // Exposes function: renderClock6(ctx, w, h, color, size, now, options)
 (function(global){
-  function drawDigitColumn(ctx, x, y, digitWidth, digitHeight, currentValue, nextValue, frac, color, fontSize, opts) {
+  function drawDigitColumn(ctx, x, y, digitWidth, digitHeight, currentValue, nextValue, timeUntil, color, fontSize, opts) {
     // opts: { gapRows: number, continuous: bool, speedRowsPerSec: number, freezeSame: bool }
     ctx.save();
     ctx.translate(x, y);
@@ -44,8 +44,9 @@
       // normal behavior: there is a visible gap between rows; we animate only nearby neighbors
       const ease = (t) => t < 0 ? 0 : t > 1 ? 1 : (1 - Math.pow(1 - t, 3));
 
-      const p = ease(frac);
-      // draw current digit sliding down, and next digit coming from above (top -> bottom)
+      const animWindow = (opts && opts.animWindowSec) || 3.0;
+      const progress = Math.max(0, Math.min(1, 1 - timeUntil / animWindow));
+      const p = ease(progress);
       // discrete stacked mode: show multiple rows but only animate during change window
       ctx.globalAlpha = 1;
       const gapRows = opts && opts.gapRows ? opts.gapRows : 1;
@@ -62,12 +63,16 @@
       let centerIndex = domain.indexOf(currentValue);
       if (centerIndex === -1) centerIndex = ((currentValue % domainLen) + domainLen) % domainLen;
 
-      for (let r = -half; r <= half; r++) {
+      // Render extra rows above center so upcoming digits are already drawn off-screen
+      const extraAbove = opts && opts.extraAbove ? opts.extraAbove : 6;
+      const extraBelow = opts && opts.extraBelow ? opts.extraBelow : 2;
+      const startR = -half - extraAbove;
+      const endR = half + extraBelow;
+      const animOffset = p * rowSpace;
+      for (let r = startR; r <= endR; r++) {
         // value mapping within domain: take domain index offset from centerIndex
         const idx = ((centerIndex - r) % domainLen + domainLen) % domainLen;
         const val = domain[idx];
-        // base position using p for animation (p==0 means center at 0)
-        const animOffset = p * rowSpace;
         const drawY = r * rowSpace + animOffset;
         const roundedY = Math.round(drawY);
         if (drawnYs.has(roundedY)) continue;
@@ -204,15 +209,15 @@
       if (i === columns.length - 1) {
         // Last column (seconds ones) remains continuous (smooth ms-based scroll)
         const speed = (options && options.clock6Speed) || (options && options.speedRowsPerSec) || 1;
-        drawDigitColumn(ctx, x, centerY, digitWidth, digitHeight, columns[i], nextValue, ms / 1000, color, fontSize, { continuous: true, speedRowsPerSec: speed });
+        drawDigitColumn(ctx, x, centerY, digitWidth, digitHeight, columns[i], nextValue, timeUntil, color, fontSize, { continuous: true, speedRowsPerSec: speed, animWindowSec: animWindow });
       } else {
-        // Non-last columns: discrete stacked mode, animate only during their change window using frac
+        // Non-last columns: discrete stacked mode, animate only during their change window using timeUntil
         // Provide a domain for tens places so they only cycle through valid digits
         let domain = null;
         if (i === 0) domain = [0,1,2]; // hour tens
         else if (i === 2 || i === 4) domain = [0,1,2,3,4,5]; // minute tens, seconds tens
         else domain = [0,1,2,3,4,5,6,7,8,9];
-        drawDigitColumn(ctx, x, centerY, digitWidth, digitHeight, columns[i], nextValue, frac, color, fontSize, { continuous: false, gapRows: 1, domain: domain });
+        drawDigitColumn(ctx, x, centerY, digitWidth, digitHeight, columns[i], nextValue, timeUntil, color, fontSize, { continuous: false, gapRows: 1, domain: domain, animWindowSec: animWindow, extraAbove: 6, extraBelow: 2 });
       }
     }
 
