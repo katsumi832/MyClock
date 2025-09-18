@@ -202,9 +202,24 @@ canvas {
 .gradient-controls input[type="color"]:focus {
   outline: none;
   box-shadow: 0 0 10px 3px rgba(255,120,40,0.28), 0 0 0 1px rgba(255,140,50,0.9) inset;
+  animation: flame-pulse 1.2s infinite ease-in-out;
 }
 .gradient-controls input[type="color"]::-webkit-color-swatch-wrapper { padding: 0; }
 .gradient-controls input[type="color"]::-webkit-color-swatch { border: none; border-radius: 50%; }
+
+/* flame pulse animation */
+@keyframes flame-pulse {
+  0% { box-shadow: 0 0 0 0 rgba(255,140,40,0.0), 0 0 0 1px rgba(255,140,50,0.9) inset; }
+  40% { box-shadow: 0 0 18px 6px rgba(255,120,40,0.22), 0 0 0 1px rgba(255,140,50,0.95) inset; }
+  70% { box-shadow: 0 0 8px 2px rgba(255,100,30,0.16), 0 0 0 1px rgba(255,140,50,0.9) inset; }
+  100% { box-shadow: 0 0 0 0 rgba(255,140,40,0.0), 0 0 0 1px rgba(255,140,50,0.9) inset; }
+}
+
+/* ensure color input stays circular across browsers */
+.gradient-controls input[type="color"] { overflow: hidden; }
+
+/* Center the gear icon exactly in the settings button */
+#settings-btn { display: inline-flex; align-items: center; justify-content: center; }
 
 /* Hide preset area (user requested no presets) */
 #preset-pairs { display: none; }
