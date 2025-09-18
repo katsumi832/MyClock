@@ -52,13 +52,13 @@ let currentStyleIndex = 0;
 // 選択状態（未保存の編集）
 let editingSettings = {
   styleIndex: currentStyleIndex,
-  color: "#00ff88",
+  color: "#14d9e8ff",
   size: 180,
   // font/bg modes: 'solid' | 'gradient' | 'split'
   fontMode: 'solid',
-  fontGrad: ['#00ff88', '#ffffff', 'vertical'],
+  fontGrad: ['#2768b7ff', '#e81fcdff', 'vertical'],
   bgMode: 'solid',
-  bgGrad: ['#000000', '#071b14', 'vertical'],
+  bgGrad: ['#2768b7ff', '#e81fcdff', 'vertical'],
   clock6Speed: 1,
 };
 
