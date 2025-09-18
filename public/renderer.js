@@ -56,9 +56,9 @@ let editingSettings = {
   size: 180,
   // font/bg modes: 'solid' | 'gradient' | 'split'
   fontMode: 'solid',
-  fontGrad: ['#C400FA', '#00EBE7', 'vertical'],
+  fontGrad: ['#C800FF', '#00EBE7', 'vertical'],
   bgMode: 'solid',
-  bgGrad: ['#C400FA', '#00EBE7', 'vertical'],
+  bgGrad: ['#C800FF', '#00EBE7', 'vertical'],
   clock6Speed: 1,
 };
 
@@ -72,7 +72,7 @@ const palette = [
   "#9e9d24","#795548","#607d8b","#f06292","#ff7043",
   "#c2185b","#7c4dff","#03a9f4","#388e3c","#ffeb3b",
   "#ad1457","#00c853","#b388ff","#ff8a65","#d500f9",
-  "#263238","#ff5252","#ffab00","#304ffe","#69f0ae"
+  "#263238","#ff5252","#ffab00","#304ffe","#69f0ae","#000000"
 ];
 function renderColorOptions() {
   colorOptionsDiv.innerHTML = "";
@@ -141,7 +141,7 @@ function renderBgHalfSwatch() {
   if (!btn) return;
   const c = document.createElement('canvas'); c.width = 40; c.height = 40;
   const t = c.getContext('2d');
-  const [c1,c2,pat] = editingSettings.bgGrad || ['#C400FA', '#00EBE7','vertical'];
+  const [c1,c2,pat] = editingSettings.bgGrad || ['#C800FF', '#00EBE7','vertical'];
   // draw left half
   t.beginPath(); t.moveTo(20,20); t.arc(20,20,18,Math.PI/2,Math.PI*3/2); t.closePath(); t.fillStyle = c1; t.fill();
   // draw right half
@@ -185,7 +185,7 @@ function renderFontHalfSwatch() {
   // create a small canvas to draw half/half circle
   const c = document.createElement('canvas'); c.width = 40; c.height = 40;
   const t = c.getContext('2d');
-  const [c1,c2,pat] = editingSettings.fontGrad || ['#C400FA', '#00EBE7','vertical'];
+  const [c1,c2,pat] = editingSettings.fontGrad || ['#C800FF', '#00EBE7','vertical'];
   // draw left half
   t.beginPath(); t.moveTo(20,20); t.arc(20,20,18,Math.PI/2,Math.PI*3/2); t.closePath(); t.fillStyle = c1; t.fill();
   // draw right half
@@ -396,50 +396,58 @@ function renderClock() {
   const w = canvas.width;
   const h = canvas.height;
 
+  // paint centralized background first
   if (appliedSettings.bgMode === 'gradient' || appliedSettings.bgMode === 'split') {
     ctx.fillStyle = makeGradient(ctx, w, h, appliedSettings.bgGrad[0], appliedSettings.bgGrad[1], appliedSettings.bgGrad[2]);
   } else {
     ctx.fillStyle = (appliedSettings.bgGrad && appliedSettings.bgGrad[0]) ? appliedSettings.bgGrad[0] : '#000';
   }
   ctx.fillRect(0, 0, w, h);
-  // prepare font paint (may be a color string or CanvasGradient/Pattern)
+
+  // Render the active clock into an offscreen canvas, then composite it on top
+  const off = document.createElement('canvas'); off.width = w; off.height = h;
+  const offCtx = off.getContext('2d');
+
+  // prepare font paint using the offscreen context
   let fontPaint = color;
   if (appliedSettings.fontMode === 'gradient' || appliedSettings.fontMode === 'split') {
     const fg = appliedSettings.fontGrad || [color, '#ffffff', 'vertical'];
-    fontPaint = makeGradient(ctx, w, h, fg[0], fg[1], fg[2]);
+    fontPaint = makeGradient(offCtx, w, h, fg[0], fg[1], fg[2]);
   }
 
   const style = clockStyles[styleIndex];
   if (style === "Clock 1") {
-    if (typeof window.renderClock1 === 'function') window.renderClock1(ctx,w,h,fontPaint,size,new Date(),{suppressBg:true});
+    if (typeof window.renderClock1 === 'function') window.renderClock1(offCtx,w,h,fontPaint,size,new Date(),{bg:(appliedSettings.bgMode==='solid'?appliedSettings.bgGrad&&appliedSettings.bgGrad[0]:null),bgGradient:(appliedSettings.bgMode==='gradient'||appliedSettings.bgMode==='split'?appliedSettings.bgGrad:null),suppressBg:true});
     else lazyLoadClock(1);
   } else if (style === "Clock 2") {
-    if (typeof window.renderClock2 === 'function') window.renderClock2(ctx,w,h,fontPaint,size,new Date(),{suppressBg:true});
+    if (typeof window.renderClock2 === 'function') window.renderClock2(offCtx,w,h,fontPaint,size,new Date(),{bg:(appliedSettings.bgMode==='solid'?appliedSettings.bgGrad&&appliedSettings.bgGrad[0]:null),bgGradient:(appliedSettings.bgMode==='gradient'||appliedSettings.bgMode==='split'?appliedSettings.bgGrad:null),suppressBg:true});
     else lazyLoadClock(2);
   } else if (style === "Clock 3") {
-    if (typeof window.renderClock3 === 'function') window.renderClock3(ctx,w,h,fontPaint,size,new Date(),{suppressBg:true});
+    if (typeof window.renderClock3 === 'function') window.renderClock3(offCtx,w,h,fontPaint,size,new Date(),{bg:(appliedSettings.bgMode==='solid'?appliedSettings.bgGrad&&appliedSettings.bgGrad[0]:null),bgGradient:(appliedSettings.bgMode==='gradient'||appliedSettings.bgMode==='split'?appliedSettings.bgGrad:null),suppressBg:true});
     else lazyLoadClock(3);
   } else if (style === "Clock 4") {
-    if (typeof window.renderClock4 === 'function') window.renderClock4(ctx,w,h,fontPaint,size,new Date(),{suppressBg:true});
+    if (typeof window.renderClock4 === 'function') window.renderClock4(offCtx,w,h,fontPaint,size,new Date(),{bg:(appliedSettings.bgMode==='solid'?appliedSettings.bgGrad&&appliedSettings.bgGrad[0]:null),bgGradient:(appliedSettings.bgMode==='gradient'||appliedSettings.bgMode==='split'?appliedSettings.bgGrad:null),suppressBg:true});
     else lazyLoadClock(4);
   } else if (style === "Clock 5") {
-    if (typeof window.renderClock5 === 'function') window.renderClock5(ctx,w,h,fontPaint,size,new Date(),{suppressBg:true});
+    if (typeof window.renderClock5 === 'function') window.renderClock5(offCtx,w,h,fontPaint,size,new Date(),{bg:(appliedSettings.bgMode==='solid'?appliedSettings.bgGrad&&appliedSettings.bgGrad[0]:null),bgGradient:(appliedSettings.bgMode==='gradient'||appliedSettings.bgMode==='split'?appliedSettings.bgGrad:null),suppressBg:true});
     else lazyLoadClock(5);
   } else if (style === "Clock 6") {
     // lazy-load Clock 6 script once
     if (typeof window.renderClock6 === 'function') {
-      // Clock 6 already receives fontPaint as computed above
       const bgArg = (appliedSettings.bgMode === 'solid') ? (appliedSettings.bgGrad && appliedSettings.bgGrad[0] ? appliedSettings.bgGrad[0] : '#000') : null;
-  const bgGradArg = (appliedSettings.bgMode === 'gradient' || appliedSettings.bgMode === 'split') ? appliedSettings.bgGrad : null;
-      window.renderClock6(ctx, w, h, fontPaint, size, new Date(), { bg: bgArg, bgGradient: bgGradArg, clock6Speed: appliedSettings.clock6Speed, suppressBg: true });
+      const bgGradArg = (appliedSettings.bgMode === 'gradient' || appliedSettings.bgMode === 'split') ? appliedSettings.bgGrad : null;
+      window.renderClock6(offCtx, w, h, fontPaint, size, new Date(), { bg: bgArg, bgGradient: bgGradArg, clock6Speed: appliedSettings.clock6Speed, suppressBg: true });
     } else if (!window._clock6ScriptLoading) {
       window._clock6ScriptLoading = true;
-  const s = document.createElement('script');
-  s.src = 'clocks/clock6/clock6.js';
-  s.onload = () => { window._clock6ScriptLoaded = true; };
+      const s = document.createElement('script');
+      s.src = 'clocks/clock6/clock6.js';
+      s.onload = () => { window._clock6ScriptLoaded = true; };
       document.body.appendChild(s);
     }
   }
+
+  // Composite offscreen rendering on top of the centralized background
+  ctx.drawImage(off, 0, 0);
 }
 
 function lazyLoadClock(n) {
@@ -456,7 +464,7 @@ function drawPreview() {
   const { styleIndex, color, size, mode } = editingSettings;
   const w = canvas.width;
   const h = canvas.height;
-  // Render preview on main canvas
+  // Render preview background first
   if (editingSettings.bgMode === 'gradient' || editingSettings.bgMode === 'split') {
     ctx.fillStyle = makeGradient(ctx, w, h, editingSettings.bgGrad[0], editingSettings.bgGrad[1], editingSettings.bgGrad[2]);
   } else {
@@ -464,11 +472,15 @@ function drawPreview() {
   }
   ctx.fillRect(0, 0, w, h);
 
-  // prepare font paint for preview (color string or CanvasGradient/Pattern)
+  // Render clock to offscreen canvas then composite so per-clock clearRect doesn't remove the background
+  const off = document.createElement('canvas'); off.width = w; off.height = h;
+  const offCtx = off.getContext('2d');
+
+  // prepare font paint for preview
   let fontPaint = color;
   if (editingSettings.fontMode === 'gradient' || editingSettings.fontMode === 'split') {
     const fg = editingSettings.fontGrad || [color, '#ffffff', 'vertical'];
-    fontPaint = makeGradient(ctx, w, h, fg[0], fg[1], fg[2]);
+    fontPaint = makeGradient(offCtx, w, h, fg[0], fg[1], fg[2]);
   }
 
   // Use the chosen `size` directly for preview so the clock doesn't shrink
@@ -476,32 +488,30 @@ function drawPreview() {
 
   const style = clockStyles[styleIndex];
   if (style === "Clock 1") {
-    if (typeof window.renderClock1 === 'function') window.renderClock1(ctx,w,h,fontPaint,previewSize,new Date(),{suppressBg:true});
+    if (typeof window.renderClock1 === 'function') window.renderClock1(offCtx,w,h,fontPaint,previewSize,new Date(),{bg:(editingSettings.bgMode==='solid'?editingSettings.bgGrad&&editingSettings.bgGrad[0]:null),bgGradient:(editingSettings.bgMode==='gradient'||editingSettings.bgMode==='split'?editingSettings.bgGrad:null),suppressBg:true});
     else lazyLoadClock(1);
   } else if (style === "Clock 2") {
-    if (typeof window.renderClock2 === 'function') window.renderClock2(ctx,w,h,fontPaint,Math.round(previewSize*0.8),new Date(),{suppressBg:true});
+    if (typeof window.renderClock2 === 'function') window.renderClock2(offCtx,w,h,fontPaint,Math.round(previewSize*0.8),new Date(),{bg:(editingSettings.bgMode==='solid'?editingSettings.bgGrad&&editingSettings.bgGrad[0]:null),bgGradient:(editingSettings.bgMode==='gradient'||editingSettings.bgMode==='split'?editingSettings.bgGrad:null),suppressBg:true});
     else lazyLoadClock(2);
   } else if (style === "Clock 3") {
-    if (typeof window.renderClock3 === 'function') window.renderClock3(ctx,w,h,fontPaint,previewSize,new Date(),{suppressBg:true});
+    if (typeof window.renderClock3 === 'function') window.renderClock3(offCtx,w,h,fontPaint,previewSize,new Date(),{bg:(editingSettings.bgMode==='solid'?editingSettings.bgGrad&&editingSettings.bgGrad[0]:null),bgGradient:(editingSettings.bgMode==='gradient'||editingSettings.bgMode==='split'?editingSettings.bgGrad:null),suppressBg:true});
     else lazyLoadClock(3);
   } else if (style === "Clock 4") {
-    if (typeof window.renderClock4 === 'function') window.renderClock4(ctx,w,h,fontPaint,previewSize,new Date(),{suppressBg:true});
+    if (typeof window.renderClock4 === 'function') window.renderClock4(offCtx,w,h,fontPaint,previewSize,new Date(),{bg:(editingSettings.bgMode==='solid'?editingSettings.bgGrad&&editingSettings.bgGrad[0]:null),bgGradient:(editingSettings.bgMode==='gradient'||editingSettings.bgMode==='split'?editingSettings.bgGrad:null),suppressBg:true});
     else lazyLoadClock(4);
   } else if (style === "Clock 5") {
-    if (typeof window.renderClock5 === 'function') window.renderClock5(ctx,w,h,fontPaint,previewSize,new Date(),{suppressBg:true});
+    if (typeof window.renderClock5 === 'function') window.renderClock5(offCtx,w,h,fontPaint,previewSize,new Date(),{bg:(editingSettings.bgMode==='solid'?editingSettings.bgGrad&&editingSettings.bgGrad[0]:null),bgGradient:(editingSettings.bgMode==='gradient'||editingSettings.bgMode==='split'?editingSettings.bgGrad:null),suppressBg:true});
     else lazyLoadClock(5);
   } else if (style === "Clock 6") {
     if (typeof window.renderClock6 === 'function') {
-      // prepare font paint
-      let fontPaint = color;
-      if (editingSettings.fontMode === 'gradient') {
-        fontPaint = { grad: editingSettings.fontGrad };
-      }
       const bgArg = (editingSettings.bgMode === 'solid') ? (editingSettings.bgGrad && editingSettings.bgGrad[0] ? editingSettings.bgGrad[0] : '#000') : null;
-  const bgGradArg = (editingSettings.bgMode === 'gradient' || editingSettings.bgMode === 'split') ? editingSettings.bgGrad : null;
-      window.renderClock6(ctx, w, h, fontPaint, size, new Date(), { bg: bgArg, bgGradient: bgGradArg, clock6Speed: editingSettings.clock6Speed, suppressBg: true });
+      const bgGradArg = (editingSettings.bgMode === 'gradient' || editingSettings.bgMode === 'split') ? editingSettings.bgGrad : null;
+      window.renderClock6(offCtx, w, h, fontPaint, previewSize, new Date(), { bg: bgArg, bgGradient: bgGradArg, clock6Speed: editingSettings.clock6Speed, suppressBg: true });
     }
   }
+
+  // composite preview
+  ctx.drawImage(off, 0, 0);
 }
 
 // ------------------

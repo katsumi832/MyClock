@@ -37,7 +37,9 @@
   const roundedY = Math.round(drawY * 100) / 100;
   if (drawnYs.has(roundedY)) continue;
   drawnYs.add(roundedY);
-        ctx.globalAlpha = 1;
+        // Make the center row fully opaque and dim the others
+        const isCenter = (r === 0);
+        ctx.globalAlpha = isCenter ? 1 : 0.35;
         ctx.fillText(String(val), 0, drawY);
       }
     } else {
@@ -69,7 +71,7 @@
       const startR = -half - extraAbove;
       const endR = half + extraBelow;
       const animOffset = p * rowSpace;
-      for (let r = startR; r <= endR; r++) {
+  for (let r = startR; r <= endR; r++) {
         // value mapping within domain: take domain index offset from centerIndex
         const idx = ((centerIndex - r) % domainLen + domainLen) % domainLen;
         const val = domain[idx];
@@ -77,6 +79,9 @@
   const roundedY = Math.round(drawY * 100) / 100;
   if (drawnYs.has(roundedY)) continue;
   drawnYs.add(roundedY);
+        // Make the center row fully opaque and dim the surrounding rows
+        const isCenter = (r === 0);
+        ctx.globalAlpha = isCenter ? 1 : 0.35;
         ctx.fillText(String(val), 0, drawY);
       }
     }
@@ -201,15 +206,17 @@
       rg.addColorStop(0,c1); rg.addColorStop(1,c2); return rg;
     }
 
-    // background
+    // background: only draw if clock is allowed to paint its own background
     ctx.clearRect(0, 0, w, h);
-    let bgPaint = options.bg || '#000';
-    if (options.bgGradient && Array.isArray(options.bgGradient)) {
-      const [c1,c2,pattern] = options.bgGradient;
-      bgPaint = makeLocalPaint(ctx,w,h,c1,c2,pattern);
+    if (!options || !options.suppressBg) {
+      let bgPaint = (options && options.bg) ? options.bg : '#000';
+      if (options && options.bgGradient && Array.isArray(options.bgGradient)) {
+        const [c1,c2,pattern] = options.bgGradient;
+        bgPaint = makeLocalPaint(ctx,w,h,c1,c2,pattern);
+      }
+      ctx.fillStyle = bgPaint;
+      ctx.fillRect(0, 0, w, h);
     }
-    ctx.fillStyle = bgPaint;
-    ctx.fillRect(0, 0, w, h);
 
   // compute start x with tighter spacing within pairs (HH, MM, SS)
   const pairInnerGap = Math.max(2, Math.floor(gap / 3)); // small gap between tens/ones
