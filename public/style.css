@@ -9,8 +9,8 @@
   cursor: pointer;
 }
 #font-half-swatch.selected { 
-  border: 3px solid #2196f3;
-  box-shadow: 0 0 0 2px #2196f3;
+  border: 2px solid #e0e0e0;
+  box-shadow: 0 0 0 4px rgba(33,150,243,0.12), 0 0 0 1px #2196f3 inset;
 }
 body {
   background: #000;
@@ -115,8 +115,8 @@ canvas {
   transition: 0.2s;
 }
 .color-circle.selected {
-  border: 3px solid #2196f3;
-  box-shadow: 0 0 0 2px #2196f3;
+  border: 2px solid #e0e0e0;
+  box-shadow: 0 0 0 4px rgba(33,150,243,0.12), 0 0 0 1px #2196f3 inset;
 }
 
 .bg-circle {
@@ -130,8 +130,8 @@ canvas {
   transition: 0.2s;
 }
 .bg-circle.selected {
-  border: 3px solid #2196f3;
-  box-shadow: 0 0 0 2px #2196f3;
+  border: 2px solid #e0e0e0;
+  box-shadow: 0 0 0 4px rgba(33,150,243,0.12), 0 0 0 1px #2196f3 inset;
 }
 
 /* background half-swatch button mirrors font half-swatch */
@@ -146,8 +146,8 @@ canvas {
   cursor: pointer;
 }
 #bg-half-swatch.selected {
-  border: 3px solid #2196f3;
-  box-shadow: 0 0 0 2px #2196f3;
+  border: 2px solid #e0e0e0;
+  box-shadow: 0 0 0 4px rgba(33,150,243,0.12), 0 0 0 1px #2196f3 inset;
 }
 
 .half-swatch {
@@ -160,8 +160,8 @@ canvas {
   box-sizing: border-box;
 }
 .half-swatch.selected {
-  border: 3px solid #2196f3;
-  box-shadow: 0 0 0 2px #2196f3;
+  border: 2px solid #e0e0e0;
+  box-shadow: 0 0 0 4px rgba(33,150,243,0.12), 0 0 0 1px #2196f3 inset;
 }
 
 .gradient-controls {
