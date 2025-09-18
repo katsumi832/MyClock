@@ -141,6 +141,8 @@ function renderBgHalfSwatch() {
     editingSettings.bgMode = 'gradient';
     if (!editingSettings.bgGrad || editingSettings.bgGrad.length < 2) editingSettings.bgGrad = [editingSettings.bgGrad && editingSettings.bgGrad[0] ? editingSettings.bgGrad[0] : '#000','#071b14','vertical'];
     const bCtr = document.getElementById('bg-gradient-controls'); if (bCtr) bCtr.classList.remove('hidden');
+    // focus first color input for quick editing
+    setTimeout(() => { const el = document.getElementById('bg-grad-c1'); if (el) el.focus(); }, 0);
     renderBgHalfSwatch();
     drawPreview();
   };
@@ -186,6 +188,8 @@ function renderFontHalfSwatch() {
     if (!editingSettings.fontGrad || editingSettings.fontGrad.length < 2) editingSettings.fontGrad = [editingSettings.color || '#00ff88','#ffffff','vertical'];
     // open gradient UI
     const fCtr = document.getElementById('font-gradient-controls'); if (fCtr) fCtr.classList.remove('hidden');
+    // focus first color input for quick editing
+    setTimeout(() => { const el = document.getElementById('font-grad-c1'); if (el) el.focus(); }, 0);
     renderFontHalfSwatch();
     drawPreview();
   };

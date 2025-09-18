@@ -168,7 +168,23 @@ canvas {
   display: flex;
   gap: 8px;
   align-items: center;
-  margin: 8px 0 10px 0;
+  margin: 6px 0 0 0;
+}
+
+/* when gradient controls live under a swatch container, stack inputs vertically */
+.settings-group #font-special-swatches .gradient-controls,
+.settings-group #bg-special-swatches .gradient-controls {
+  flex-direction: row;
+  align-items: center;
+}
+
+/* small viewport: make controls wrap under the swatch neatly */
+@media (max-width: 480px) {
+  .settings-group #font-special-swatches .gradient-controls,
+  .settings-group #bg-special-swatches .gradient-controls {
+    flex-direction: column;
+    align-items: flex-start;
+  }
 }
 
 /* Hide preset area (user requested no presets) */
