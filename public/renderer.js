@@ -516,11 +516,15 @@ canvas.addEventListener("click", (e) => {
   }
 
   if (settingsBtn.style.opacity === "1") {
+    // hide immediately and cancel any pending hide timer
     settingsBtn.style.opacity = "0";
     settingsBtn.style.pointerEvents = "none";
+    if (hideSettingsBtnTimeout) { clearTimeout(hideSettingsBtnTimeout); hideSettingsBtnTimeout = null; }
   } else {
+    // show and start the hide timer
     settingsBtn.style.opacity = "1";
     settingsBtn.style.pointerEvents = "auto";
+    hideSettingsBtnAfterDelay();
   }
 });
 
@@ -546,14 +550,15 @@ settingsBtn.addEventListener("click", (e) => {
   drawPreview();
 });
 
-// Helper to hide settings button after 5 seconds
+// Helper to hide settings button after 10 seconds
 let hideSettingsBtnTimeout = null;
 function hideSettingsBtnAfterDelay() {
   if (hideSettingsBtnTimeout) clearTimeout(hideSettingsBtnTimeout);
   hideSettingsBtnTimeout = setTimeout(() => {
     settingsBtn.style.opacity = "0";
     settingsBtn.style.pointerEvents = "none";
-  }, 5000);
+    hideSettingsBtnTimeout = null;
+  }, 10000); // 10 seconds
 }
 
 // 時計スタイル切替
