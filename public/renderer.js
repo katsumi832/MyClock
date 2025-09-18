@@ -56,9 +56,9 @@ let editingSettings = {
   size: 180,
   // font/bg modes: 'solid' | 'gradient' | 'split'
   fontMode: 'solid',
-  fontGrad: ['#2768b7ff', '#e81fcdff', 'vertical'],
+  fontGrad: ['#C400FA', '#00EBE7', 'vertical'],
   bgMode: 'solid',
-  bgGrad: ['#2768b7ff', '#e81fcdff', 'vertical'],
+  bgGrad: ['#C400FA', '#00EBE7', 'vertical'],
   clock6Speed: 1,
 };
 
@@ -141,7 +141,7 @@ function renderBgHalfSwatch() {
   if (!btn) return;
   const c = document.createElement('canvas'); c.width = 40; c.height = 40;
   const t = c.getContext('2d');
-  const [c1,c2,pat] = editingSettings.bgGrad || ['#000000','#071b14','vertical'];
+  const [c1,c2,pat] = editingSettings.bgGrad || ['#C400FA', '#00EBE7','vertical'];
   // draw left half
   t.beginPath(); t.moveTo(20,20); t.arc(20,20,18,Math.PI/2,Math.PI*3/2); t.closePath(); t.fillStyle = c1; t.fill();
   // draw right half
@@ -185,7 +185,7 @@ function renderFontHalfSwatch() {
   // create a small canvas to draw half/half circle
   const c = document.createElement('canvas'); c.width = 40; c.height = 40;
   const t = c.getContext('2d');
-  const [c1,c2,pat] = editingSettings.fontGrad || ['#00ff88','#ffffff','vertical'];
+  const [c1,c2,pat] = editingSettings.fontGrad || ['#C400FA', '#00EBE7','vertical'];
   // draw left half
   t.beginPath(); t.moveTo(20,20); t.arc(20,20,18,Math.PI/2,Math.PI*3/2); t.closePath(); t.fillStyle = c1; t.fill();
   // draw right half
@@ -402,29 +402,33 @@ function renderClock() {
     ctx.fillStyle = (appliedSettings.bgGrad && appliedSettings.bgGrad[0]) ? appliedSettings.bgGrad[0] : '#000';
   }
   ctx.fillRect(0, 0, w, h);
+  // prepare font paint (may be a color string or CanvasGradient/Pattern)
+  let fontPaint = color;
+  if (appliedSettings.fontMode === 'gradient' || appliedSettings.fontMode === 'split') {
+    const fg = appliedSettings.fontGrad || [color, '#ffffff', 'vertical'];
+    fontPaint = makeGradient(ctx, w, h, fg[0], fg[1], fg[2]);
+  }
+
   const style = clockStyles[styleIndex];
   if (style === "Clock 1") {
-    if (typeof window.renderClock1 === 'function') window.renderClock1(ctx,w,h,color,size,new Date(),{suppressBg:true});
+    if (typeof window.renderClock1 === 'function') window.renderClock1(ctx,w,h,fontPaint,size,new Date(),{suppressBg:true});
     else lazyLoadClock(1);
   } else if (style === "Clock 2") {
-    if (typeof window.renderClock2 === 'function') window.renderClock2(ctx,w,h,color,size,new Date(),{suppressBg:true});
+    if (typeof window.renderClock2 === 'function') window.renderClock2(ctx,w,h,fontPaint,size,new Date(),{suppressBg:true});
     else lazyLoadClock(2);
   } else if (style === "Clock 3") {
-    if (typeof window.renderClock3 === 'function') window.renderClock3(ctx,w,h,color,size,new Date(),{suppressBg:true});
+    if (typeof window.renderClock3 === 'function') window.renderClock3(ctx,w,h,fontPaint,size,new Date(),{suppressBg:true});
     else lazyLoadClock(3);
   } else if (style === "Clock 4") {
-    if (typeof window.renderClock4 === 'function') window.renderClock4(ctx,w,h,color,size,new Date(),{suppressBg:true});
+    if (typeof window.renderClock4 === 'function') window.renderClock4(ctx,w,h,fontPaint,size,new Date(),{suppressBg:true});
     else lazyLoadClock(4);
   } else if (style === "Clock 5") {
-    if (typeof window.renderClock5 === 'function') window.renderClock5(ctx,w,h,color,size,new Date(),{suppressBg:true});
+    if (typeof window.renderClock5 === 'function') window.renderClock5(ctx,w,h,fontPaint,size,new Date(),{suppressBg:true});
     else lazyLoadClock(5);
   } else if (style === "Clock 6") {
     // lazy-load Clock 6 script once
     if (typeof window.renderClock6 === 'function') {
-      let fontPaint = color;
-      if (appliedSettings.fontMode === 'gradient') {
-        fontPaint = { grad: appliedSettings.fontGrad };
-      }
+      // Clock 6 already receives fontPaint as computed above
       const bgArg = (appliedSettings.bgMode === 'solid') ? (appliedSettings.bgGrad && appliedSettings.bgGrad[0] ? appliedSettings.bgGrad[0] : '#000') : null;
   const bgGradArg = (appliedSettings.bgMode === 'gradient' || appliedSettings.bgMode === 'split') ? appliedSettings.bgGrad : null;
       window.renderClock6(ctx, w, h, fontPaint, size, new Date(), { bg: bgArg, bgGradient: bgGradArg, clock6Speed: appliedSettings.clock6Speed, suppressBg: true });
@@ -460,24 +464,31 @@ function drawPreview() {
   }
   ctx.fillRect(0, 0, w, h);
 
+  // prepare font paint for preview (color string or CanvasGradient/Pattern)
+  let fontPaint = color;
+  if (editingSettings.fontMode === 'gradient' || editingSettings.fontMode === 'split') {
+    const fg = editingSettings.fontGrad || [color, '#ffffff', 'vertical'];
+    fontPaint = makeGradient(ctx, w, h, fg[0], fg[1], fg[2]);
+  }
+
   // Use the chosen `size` directly for preview so the clock doesn't shrink
   const previewSize = size;
 
   const style = clockStyles[styleIndex];
   if (style === "Clock 1") {
-    if (typeof window.renderClock1 === 'function') window.renderClock1(ctx,w,h,color,previewSize,new Date(),{suppressBg:true});
+    if (typeof window.renderClock1 === 'function') window.renderClock1(ctx,w,h,fontPaint,previewSize,new Date(),{suppressBg:true});
     else lazyLoadClock(1);
   } else if (style === "Clock 2") {
-    if (typeof window.renderClock2 === 'function') window.renderClock2(ctx,w,h,color,Math.round(previewSize*0.8),new Date(),{suppressBg:true});
+    if (typeof window.renderClock2 === 'function') window.renderClock2(ctx,w,h,fontPaint,Math.round(previewSize*0.8),new Date(),{suppressBg:true});
     else lazyLoadClock(2);
   } else if (style === "Clock 3") {
-    if (typeof window.renderClock3 === 'function') window.renderClock3(ctx,w,h,color,previewSize,new Date(),{suppressBg:true});
+    if (typeof window.renderClock3 === 'function') window.renderClock3(ctx,w,h,fontPaint,previewSize,new Date(),{suppressBg:true});
     else lazyLoadClock(3);
   } else if (style === "Clock 4") {
-    if (typeof window.renderClock4 === 'function') window.renderClock4(ctx,w,h,color,previewSize,new Date(),{suppressBg:true});
+    if (typeof window.renderClock4 === 'function') window.renderClock4(ctx,w,h,fontPaint,previewSize,new Date(),{suppressBg:true});
     else lazyLoadClock(4);
   } else if (style === "Clock 5") {
-    if (typeof window.renderClock5 === 'function') window.renderClock5(ctx,w,h,color,previewSize,new Date(),{suppressBg:true});
+    if (typeof window.renderClock5 === 'function') window.renderClock5(ctx,w,h,fontPaint,previewSize,new Date(),{suppressBg:true});
     else lazyLoadClock(5);
   } else if (style === "Clock 6") {
     if (typeof window.renderClock6 === 'function') {

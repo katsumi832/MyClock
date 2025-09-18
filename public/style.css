@@ -219,6 +219,9 @@ canvas {
 /* ensure color input stays circular across browsers */
 .gradient-controls input[type="color"] { overflow: hidden; }
 
+/* subtle permanent white inset ring so tabs look white-framed */
+.gradient-controls input[type="color"] { box-shadow: 0 0 0 2px rgba(255,255,255,0.12) inset; }
+
 /* Center the gear icon exactly in the settings button */
 #settings-btn { display: inline-flex; align-items: center; justify-content: center; }
 
