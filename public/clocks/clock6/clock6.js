@@ -37,9 +37,8 @@
   const roundedY = Math.round(drawY * 100) / 100;
   if (drawnYs.has(roundedY)) continue;
   drawnYs.add(roundedY);
-        // Make the center row fully opaque and dim the others
-        const isCenter = (r === 0);
-        ctx.globalAlpha = isCenter ? 1 : 0.35;
+  // Use normal opacity for all rows
+  ctx.globalAlpha = 1;
         ctx.fillText(String(val), 0, drawY);
       }
     } else {
@@ -79,9 +78,8 @@
   const roundedY = Math.round(drawY * 100) / 100;
   if (drawnYs.has(roundedY)) continue;
   drawnYs.add(roundedY);
-        // Make the center row fully opaque and dim the surrounding rows
-        const isCenter = (r === 0);
-        ctx.globalAlpha = isCenter ? 1 : 0.35;
+  // Use normal opacity for all rows
+  ctx.globalAlpha = 1;
         ctx.fillText(String(val), 0, drawY);
       }
     }
