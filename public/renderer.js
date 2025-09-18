@@ -82,8 +82,13 @@ function renderColorOptions() {
     div.style.background = c;
     if (c === editingSettings.color) div.classList.add("selected");
     div.addEventListener("click", () => {
+      // switch to solid font color when user picks a palette swatch
+      editingSettings.fontMode = 'solid';
       editingSettings.color = c;
+      // hide font gradient controls if visible
+      const fCtr = document.getElementById('font-gradient-controls'); if (fCtr) fCtr.classList.add('hidden');
       renderColorOptions();
+      renderFontHalfSwatch();
       drawPreview();
     });
     colorOptionsDiv.appendChild(div);
@@ -112,8 +117,15 @@ function renderBgOptions() {
     div.style.background = c;
     if (c === editingSettings.bgGrad[0]) div.classList.add('selected');
     div.addEventListener("click", () => {
-      editingSettings.bgGrad[0] = c;
+      // switch to solid background color when user picks a palette swatch
+      editingSettings.bgMode = 'solid';
+      // ensure bgGrad exists and set first color to chosen
+      if (!editingSettings.bgGrad) editingSettings.bgGrad = [c, '#071b14','vertical'];
+      else editingSettings.bgGrad[0] = c;
+      // hide bg gradient controls if visible
+      const bCtr = document.getElementById('bg-gradient-controls'); if (bCtr) bCtr.classList.add('hidden');
       renderBgOptions();
+      renderBgHalfSwatch();
       drawPreview();
     });
     bgColorOptionsDiv.appendChild(div);

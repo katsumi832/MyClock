@@ -187,6 +187,25 @@ canvas {
   }
 }
 
+/* make color input look like a small circular tab and glow on focus */
+.gradient-controls input[type="color"] {
+  width: 36px;
+  height: 36px;
+  padding: 0;
+  border-radius: 50%;
+  border: 2px solid rgba(0,0,0,0.12);
+  box-shadow: 0 0 0 0 rgba(0,0,0,0);
+  appearance: none;
+  -webkit-appearance: none;
+  cursor: pointer;
+}
+.gradient-controls input[type="color"]:focus {
+  outline: none;
+  box-shadow: 0 0 10px 3px rgba(255,120,40,0.28), 0 0 0 1px rgba(255,140,50,0.9) inset;
+}
+.gradient-controls input[type="color"]::-webkit-color-swatch-wrapper { padding: 0; }
+.gradient-controls input[type="color"]::-webkit-color-swatch { border: none; border-radius: 50%; }
+
 /* Hide preset area (user requested no presets) */
 #preset-pairs { display: none; }
 
