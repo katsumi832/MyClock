@@ -85,6 +85,24 @@ function renderColorOptions() {
       // switch to solid font color when user picks a palette swatch
       editingSettings.fontMode = 'solid';
       editingSettings.color = c;
+      // When user picks the first palette swatch (index 0), also set black background + white font
+      try {
+        const idx = palette.indexOf(c);
+        if (idx === 0) {
+          // set white font on black background immediately for all clocks
+          editingSettings.color = '#ffffff';
+          editingSettings.bgMode = 'solid';
+          if (!editingSettings.bgGrad) editingSettings.bgGrad = ['#000000','#071b14','vertical'];
+          editingSettings.bgGrad[0] = '#000000';
+          // also apply immediately so main render updates without Confirm
+          appliedSettings.color = '#ffffff';
+          appliedSettings.bgMode = 'solid';
+          if (!appliedSettings.bgGrad) appliedSettings.bgGrad = ['#000000','#071b14','vertical'];
+          appliedSettings.bgGrad[0] = '#000000';
+          // redraw main canvas and preview
+          renderClock();
+        }
+      } catch (e) {}
       // hide font gradient controls if visible
       const fCtr = document.getElementById('font-gradient-controls'); if (fCtr) fCtr.classList.add('hidden');
       renderColorOptions();
@@ -97,6 +115,8 @@ function renderColorOptions() {
 renderColorOptions();
 // update font half-swatch when palette changes
 renderFontHalfSwatch();
+
+// (monochrome UI removed)
 
 // Initialize labels to reflect current editingSettings
 styleLabel.textContent = clockStyles[editingSettings.styleIndex];
@@ -491,16 +511,16 @@ function drawPreview() {
     if (typeof window.renderClock1 === 'function') window.renderClock1(offCtx,w,h,fontPaint,previewSize,new Date(),{bg:(editingSettings.bgMode==='solid'?editingSettings.bgGrad&&editingSettings.bgGrad[0]:null),bgGradient:(editingSettings.bgMode==='gradient'||editingSettings.bgMode==='split'?editingSettings.bgGrad:null),suppressBg:true});
     else lazyLoadClock(1);
   } else if (style === "Clock 2") {
-    if (typeof window.renderClock2 === 'function') window.renderClock2(offCtx,w,h,fontPaint,Math.round(previewSize*0.8),new Date(),{bg:(editingSettings.bgMode==='solid'?editingSettings.bgGrad&&editingSettings.bgGrad[0]:null),bgGradient:(editingSettings.bgMode==='gradient'||editingSettings.bgMode==='split'?editingSettings.bgGrad:null),suppressBg:true});
+  if (typeof window.renderClock2 === 'function') window.renderClock2(offCtx,w,h,fontPaint,Math.round(previewSize*0.8),new Date(),{bg:(editingSettings.bgMode==='solid'?editingSettings.bgGrad&&editingSettings.bgGrad[0]:null),bgGradient:(editingSettings.bgMode==='gradient'||editingSettings.bgMode==='split'?editingSettings.bgGrad:null),suppressBg:true});
     else lazyLoadClock(2);
   } else if (style === "Clock 3") {
-    if (typeof window.renderClock3 === 'function') window.renderClock3(offCtx,w,h,fontPaint,previewSize,new Date(),{bg:(editingSettings.bgMode==='solid'?editingSettings.bgGrad&&editingSettings.bgGrad[0]:null),bgGradient:(editingSettings.bgMode==='gradient'||editingSettings.bgMode==='split'?editingSettings.bgGrad:null),suppressBg:true});
+  if (typeof window.renderClock3 === 'function') window.renderClock3(offCtx,w,h,fontPaint,previewSize,new Date(),{bg:(editingSettings.bgMode==='solid'?editingSettings.bgGrad&&editingSettings.bgGrad[0]:null),bgGradient:(editingSettings.bgMode==='gradient'||editingSettings.bgMode==='split'?editingSettings.bgGrad:null),suppressBg:true});
     else lazyLoadClock(3);
   } else if (style === "Clock 4") {
-    if (typeof window.renderClock4 === 'function') window.renderClock4(offCtx,w,h,fontPaint,previewSize,new Date(),{bg:(editingSettings.bgMode==='solid'?editingSettings.bgGrad&&editingSettings.bgGrad[0]:null),bgGradient:(editingSettings.bgMode==='gradient'||editingSettings.bgMode==='split'?editingSettings.bgGrad:null),suppressBg:true});
+  if (typeof window.renderClock4 === 'function') window.renderClock4(offCtx,w,h,fontPaint,previewSize,new Date(),{bg:(editingSettings.bgMode==='solid'?editingSettings.bgGrad&&editingSettings.bgGrad[0]:null),bgGradient:(editingSettings.bgMode==='gradient'||editingSettings.bgMode==='split'?editingSettings.bgGrad:null),suppressBg:true});
     else lazyLoadClock(4);
   } else if (style === "Clock 5") {
-    if (typeof window.renderClock5 === 'function') window.renderClock5(offCtx,w,h,fontPaint,previewSize,new Date(),{bg:(editingSettings.bgMode==='solid'?editingSettings.bgGrad&&editingSettings.bgGrad[0]:null),bgGradient:(editingSettings.bgMode==='gradient'||editingSettings.bgMode==='split'?editingSettings.bgGrad:null),suppressBg:true});
+  if (typeof window.renderClock5 === 'function') window.renderClock5(offCtx,w,h,fontPaint,previewSize,new Date(),{bg:(editingSettings.bgMode==='solid'?editingSettings.bgGrad&&editingSettings.bgGrad[0]:null),bgGradient:(editingSettings.bgMode==='gradient'||editingSettings.bgMode==='split'?editingSettings.bgGrad:null),suppressBg:true});
     else lazyLoadClock(5);
   } else if (style === "Clock 6") {
     if (typeof window.renderClock6 === 'function') {

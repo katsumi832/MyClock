@@ -89,6 +89,7 @@
 
   function renderVerticalClock(ctx, w, h, color, size, now, options) {
     options = options || {};
+  // options default
     const padding = options.padding || 16;
     const gap = options.gap || 8;
 
@@ -105,14 +106,14 @@
     const sTens = Math.floor(secs / 10);
     const sOnes = secs % 10;
 
-    // We'll animate each digit only during a short window before it changes
-    const secFrac = ms / 1000; // 0-1 within current second
-    const animWindow = (options.animWindowMs || 600) / 1000; // seconds (default 600ms)
+  // We'll animate each digit only during a short window before it changes
+  const secFrac = ms / 1000; // 0-1 within current second
+  const animWindow = (options.animWindowMs || 600) / 1000; // seconds (default 600ms)
+  // times until next change for each column (0..5)
+  const tToNext = [Infinity, Infinity, Infinity, Infinity, Infinity, Infinity];
 
     // layout: six columns for HH:MM:SS
     const columns = [hTens, hOnes, mTens, mOnes, sTens, sOnes];
-    const tToNext = new Array(6).fill(Infinity);
-
     const nowMs = now.getTime();
 
     // helper to compute seconds until a given future Date
@@ -173,7 +174,7 @@
   const totalGap = gap * (columns.length - 1) + padding * 2;
   const digitWidth = Math.min(120, Math.floor((w - totalGap) / columns.length));
   const digitHeight = Math.floor(digitWidth * 1.8);
-  const fontSize = Math.floor(digitWidth * 1.15);
+  const fontSize = Math.floor(digitWidth * 1.4);
 
     // helper to create gradients/patterns locally (supports split)
     function makeLocalPaint(ctx, w, h, c1, c2, pattern) {
@@ -212,6 +213,7 @@
         const [c1,c2,pattern] = options.bgGradient;
         bgPaint = makeLocalPaint(ctx,w,h,c1,c2,pattern);
       }
+  // no forced monochrome here — use passed `options.bg` / `options.bgGradient`
       ctx.fillStyle = bgPaint;
       ctx.fillRect(0, 0, w, h);
     }
@@ -230,6 +232,7 @@
       const [c1,c2,pattern] = color.grad;
       fontPaint = makeLocalPaint(ctx,w,h,c1,c2,pattern);
     }
+  // use the passed `color` / gradient as fontPaint
 
     for (let i = 0; i < columns.length; i++) {
       // map index to x with tighter pair spacing: indices 0-1 (H),2-3(M),4-5(S)
@@ -268,7 +271,7 @@
     }
 
   // draw colon separators between HH:MM:SS as exact midpoints between pairs
-  ctx.fillStyle = color;
+  ctx.fillStyle = fontPaint;
   ctx.font = `700 ${Math.floor(fontSize * 0.6)}px monospace`;
   // helper to compute the x position used earlier for a given digit index
   const xForIndex = (i) => startX + Math.floor(i / 2) * (digitWidth * 2 + pairInnerGap + pairOuterGap) + (i % 2) * (digitWidth + pairInnerGap);
