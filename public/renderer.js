@@ -26,11 +26,14 @@ const styleNextBtn = document.getElementById("clock-style-next");
 const styleLabel = document.getElementById("clock-style-label");
 
 const colorOptionsDiv = document.getElementById("color-options");
-const bgColorOptionsDiv = document.getElementById("bg-color-options");
+// removed background color panel element to hide background controls from settings
+// const bgColorOptionsDiv = document.getElementById("bg-color-options");
+
 // gradient controls
 const fontGradC1 = document.getElementById('font-grad-c1');
 const fontGradC2 = document.getElementById('font-grad-c2');
 const fontGradPattern = document.getElementById('font-grad-pattern');
+// background gradient inputs are no longer used; keep variables only if DOM exists but do not use them
 const bgGradC1 = document.getElementById('bg-grad-c1');
 const bgGradC2 = document.getElementById('bg-grad-c2');
 const bgGradPattern = document.getElementById('bg-grad-pattern');
@@ -54,11 +57,12 @@ let editingSettings = {
   styleIndex: currentStyleIndex,
   color: "#ffffffff",
   size: 180,
-  // font/bg modes: 'solid' | 'gradient' | 'split'
+  // font/bg modes: 'solid' | 'gradient' | 'split' | 'transparent'
   fontMode: 'solid',
   fontGrad: ['#fff700ff', '#00e5ffff', 'vertical'],
-  bgMode: 'solid',
-  bgGrad: ['#000000ff', '#ff00e6ff', 'vertical'],
+  // make background transparent by default and remove bg swatches from UI
+  bgMode: 'transparent',
+  bgGrad: [],
   clock6Speed: 1,
 };
 
@@ -85,24 +89,7 @@ function renderColorOptions() {
       // switch to solid font color when user picks a palette swatch
       editingSettings.fontMode = 'solid';
       editingSettings.color = c;
-      // When user picks the first palette swatch (index 0), also set black background + white font
-      try {
-        const idx = palette.indexOf(c);
-        if (idx === 0) {
-          // set white font on black background immediately for all clocks
-          editingSettings.color = '#ffffff';
-          editingSettings.bgMode = 'solid';
-          if (!editingSettings.bgGrad) editingSettings.bgGrad = ['#000000','#071b14','vertical'];
-          editingSettings.bgGrad[0] = '#000000';
-          // also apply immediately so main render updates without Confirm
-          appliedSettings.color = '#ffffff';
-          appliedSettings.bgMode = 'solid';
-          if (!appliedSettings.bgGrad) appliedSettings.bgGrad = ['#000000','#071b14','vertical'];
-          appliedSettings.bgGrad[0] = '#000000';
-          // redraw main canvas and preview
-          renderClock();
-        }
-      } catch (e) {}
+      // removed automatic background-setting behavior to keep background transparent
       // hide font gradient controls if visible
       const fCtr = document.getElementById('font-gradient-controls'); if (fCtr) fCtr.classList.add('hidden');
       renderColorOptions();
@@ -125,35 +112,10 @@ sizeLabel.textContent = editingSettings.size;
 if (fontGradC1) fontGradC1.value = editingSettings.fontGrad[0];
 if (fontGradC2) fontGradC2.value = editingSettings.fontGrad[1];
 if (fontGradPattern) fontGradPattern.value = editingSettings.fontGrad[2];
+// background gradient inputs are no longer used; keep variables only if DOM exists but do not use them
 if (bgGradC1) bgGradC1.value = editingSettings.bgGrad[0];
 if (bgGradC2) bgGradC2.value = editingSettings.bgGrad[1];
 if (bgGradPattern) bgGradPattern.value = editingSettings.bgGrad[2];
-
-function renderBgOptions() {
-  bgColorOptionsDiv.innerHTML = "";
-  palette.forEach((c) => {
-    const div = document.createElement("div");
-    div.classList.add("bg-circle");
-    div.style.background = c;
-    if (c === editingSettings.bgGrad[0]) div.classList.add('selected');
-    div.addEventListener("click", () => {
-      // switch to solid background color when user picks a palette swatch
-      editingSettings.bgMode = 'solid';
-      // ensure bgGrad exists and set first color to chosen
-      if (!editingSettings.bgGrad) editingSettings.bgGrad = [c, '#071b14','vertical'];
-      else editingSettings.bgGrad[0] = c;
-      // hide bg gradient controls if visible
-      const bCtr = document.getElementById('bg-gradient-controls'); if (bCtr) bCtr.classList.add('hidden');
-      renderBgOptions();
-      renderBgHalfSwatch();
-      drawPreview();
-    });
-    bgColorOptionsDiv.appendChild(div);
-  });
-}
-renderBgOptions();
-// update bg half-swatch when palette changes
-renderBgHalfSwatch();
 
 // Render the half-swatch button for background special swatch
 function renderBgHalfSwatch() {
@@ -183,17 +145,18 @@ renderBgHalfSwatch();
 
 function updateGradientUI() {
   const fCtr = document.getElementById('font-gradient-controls');
-  const bCtr = document.getElementById('bg-gradient-controls');
+  // background gradient UI removed; only toggle font gradient controls
   if (fCtr) fCtr.classList.toggle('hidden', editingSettings.fontMode !== 'gradient');
-  if (bCtr) bCtr.classList.toggle('hidden', editingSettings.bgMode !== 'gradient');
 }
 // gradient controls are only shown when user activates a half-swatch
 if (fontGradC1) fontGradC1.addEventListener('input', (e)=>{ editingSettings.fontGrad[0]=e.target.value; drawPreview(); });
 if (fontGradC2) fontGradC2.addEventListener('input', (e)=>{ editingSettings.fontGrad[1]=e.target.value; drawPreview(); });
 if (fontGradPattern) fontGradPattern.addEventListener('change', (e)=>{ editingSettings.fontGrad[2]=e.target.value; drawPreview(); });
-if (bgGradC1) bgGradC1.addEventListener('input', (e)=>{ editingSettings.bgGrad[0]=e.target.value; drawPreview(); });
-if (bgGradC2) bgGradC2.addEventListener('input', (e)=>{ editingSettings.bgGrad[1]=e.target.value; drawPreview(); });
-if (bgGradPattern) bgGradPattern.addEventListener('change', (e)=>{ editingSettings.bgGrad[2]=e.target.value; drawPreview(); });
+// removed bg gradient event listeners to avoid background editing
+// if (bgGradC1) bgGradC1.addEventListener('input', (e)=>{ editingSettings.bgGrad[0]=e.target.value; drawPreview(); });
+// if (bgGradC2) bgGradC2.addEventListener('input', (e)=>{ editingSettings.bgGrad[1]=e.target.value; drawPreview(); });
+// if (bgGradPattern) bgGradPattern.addEventListener('change', (e)=>{ editingSettings.bgGrad[2]=e.target.value; drawPreview(); });
+
 // keep gradient controls hidden by default; they will be shown when user clicks half-swatch
 // initialize gradient control visibility
 updateGradientUI();
@@ -338,8 +301,7 @@ function drawAnalog(ctx, w, h, color, size) {
 
 function drawMinimal(ctx, w, h, color, size) {
   ctx.clearRect(0, 0, w, h);
-  ctx.fillStyle = modeForContext(ctx) === "dark" ? "#000" : "#fff";
-  ctx.fillRect(0, 0, w, h);
+  // removed filling a background color so canvas remains transparent
   ctx.fillStyle = color;
   ctx.textAlign = "center";
   ctx.textBaseline = "middle";
@@ -351,8 +313,7 @@ function drawMinimal(ctx, w, h, color, size) {
 
 function drawDots(ctx, w, h, color, size) {
   ctx.clearRect(0, 0, w, h);
-  ctx.fillStyle = modeForContext(ctx) === "dark" ? "#000" : "#fff";
-  ctx.fillRect(0, 0, w, h);
+  // removed background fill to preserve transparency
   const now = new Date();
   const hours = now.getHours();
   const mins = now.getMinutes();
@@ -379,8 +340,7 @@ function drawDots(ctx, w, h, color, size) {
 
 function drawBinary(ctx, w, h, color, size) {
   ctx.clearRect(0, 0, w, h);
-  ctx.fillStyle = modeForContext(ctx) === "dark" ? "#000" : "#fff";
-  ctx.fillRect(0, 0, w, h);
+  // removed background fill to preserve transparency
   const now = new Date();
   const parts = [now.getHours(), now.getMinutes(), now.getSeconds()];
   ctx.fillStyle = color;
@@ -416,13 +376,8 @@ function renderClock() {
   const w = canvas.width;
   const h = canvas.height;
 
-  // paint centralized background first
-  if (appliedSettings.bgMode === 'gradient' || appliedSettings.bgMode === 'split') {
-    ctx.fillStyle = makeGradient(ctx, w, h, appliedSettings.bgGrad[0], appliedSettings.bgGrad[1], appliedSettings.bgGrad[2]);
-  } else {
-    ctx.fillStyle = (appliedSettings.bgGrad && appliedSettings.bgGrad[0]) ? appliedSettings.bgGrad[0] : '#000';
-  }
-  ctx.fillRect(0, 0, w, h);
+  // Do not paint a solid background — clear canvas to transparent so the wall shows through
+  ctx.clearRect(0, 0, w, h);
 
   // Render the active clock into an offscreen canvas, then composite it on top
   const off = document.createElement('canvas'); off.width = w; off.height = h;
@@ -484,13 +439,8 @@ function drawPreview() {
   const { styleIndex, color, size, mode } = editingSettings;
   const w = canvas.width;
   const h = canvas.height;
-  // Render preview background first
-  if (editingSettings.bgMode === 'gradient' || editingSettings.bgMode === 'split') {
-    ctx.fillStyle = makeGradient(ctx, w, h, editingSettings.bgGrad[0], editingSettings.bgGrad[1], editingSettings.bgGrad[2]);
-  } else {
-    ctx.fillStyle = editingSettings.bgGrad && editingSettings.bgGrad[0] ? editingSettings.bgGrad[0] : '#000';
-  }
-  ctx.fillRect(0, 0, w, h);
+  // Do not paint a preview background — keep preview transparent
+  ctx.clearRect(0, 0, w, h);
 
   // Render clock to offscreen canvas then composite so per-clock clearRect doesn't remove the background
   const off = document.createElement('canvas'); off.width = w; off.height = h;
