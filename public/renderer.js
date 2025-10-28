@@ -49,7 +49,7 @@ const applyBtn = document.getElementById("apply-btn");
 // ------------------
 // 時計スタイル
 // ------------------
-const clockStyles = ["Clock 1", "Clock 2", "Clock 3", "Clock 4", "Clock 5", "Clock 6"];
+const clockStyles = ["Clock 1", "Clock 2", "Clock 3", "Clock 4", "Clock 5", "Clock 6", "Clock 7"];
 let currentStyleIndex = 0;
 
 // 選択状態（未保存の編集）
@@ -372,6 +372,17 @@ function renderClock() {
       s.onload = () => { window._clock6ScriptLoaded = true; };
       document.body.appendChild(s);
     }
+  } else if (style === "Clock 7") {
+    // lazy-load Clock 7 script once
+    if (typeof window.renderClock7 === 'function') {
+      window.renderClock7(offCtx, w, h, fontPaint, size, new Date(), { suppressBg: true });
+    } else if (!window._clock7ScriptLoading) {
+      window._clock7ScriptLoading = true;
+      const s = document.createElement('script');
+      s.src = 'clocks/clock7/clock7.js';
+      s.onload = () => { window._clock7ScriptLoaded = true; };
+      document.body.appendChild(s);
+    }
   }
 
   // Composite offscreen rendering on top of the centralized background
@@ -383,7 +394,7 @@ function lazyLoadClock(n) {
   if (window[key]) return;
   window[key] = true;
   const s = document.createElement('script');
-  s.src = `clocks/clock${n}/${n===1? 'digital' : n===2? 'analog' : n===3? 'minimal' : n===4? 'dots' : 'binary'}.js`;
+  s.src = `clocks/clock${n}/${n===1? 'digital' : n===2? 'analog' : n===3? 'minimal' : n===4? 'dots' : n===5? 'binary' : n===6? 'clock6' : 'clock7'}.js`;
   s.onload = () => { /* loaded */ };
   document.body.appendChild(s);
 }
@@ -430,6 +441,14 @@ function drawPreview() {
       const bgArg = (editingSettings.bgMode === 'solid') ? (editingSettings.bgGrad && editingSettings.bgGrad[0] ? editingSettings.bgGrad[0] : '#000') : null;
       const bgGradArg = (editingSettings.bgMode === 'gradient' || editingSettings.bgMode === 'split') ? editingSettings.bgGrad : null;
       window.renderClock6(offCtx, w, h, fontPaint, previewSize, new Date(), { bg: bgArg, bgGradient: bgGradArg, clock6Speed: editingSettings.clock6Speed, suppressBg: true });
+    } else {
+      lazyLoadClock(6);
+    }
+  } else if (style === "Clock 7") {
+    if (typeof window.renderClock7 === 'function') {
+      window.renderClock7(offCtx, w, h, fontPaint, previewSize, new Date(), { suppressBg: true });
+    } else {
+      lazyLoadClock(7);
     }
   }
 
