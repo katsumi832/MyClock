@@ -411,7 +411,6 @@ function renderClock4(ctx, w, h, fontPaint, size, now, opts) {
 	const radius = Math.min(w, h) * 0.38;
 
 	// Ring stroke — made thinner
-	// previous: Math.max(2, Math.floor(size * 0.04))
 	const ringWidth = Math.max(1, Math.floor(size * 0.02));
 	ctx.lineWidth = ringWidth;
 	try { ctx.strokeStyle = fontPaint; } catch (e) { ctx.strokeStyle = '#ffffff'; }
@@ -439,14 +438,17 @@ function renderClock4(ctx, w, h, fontPaint, size, now, opts) {
 	const timeText = `${hh}:${mm}`;
 
 	// choose a single font size that fits comfortably in the circle
-	// start from a large size and shrink until it fits within 80% of the circle diameter
-	let fontSize = Math.max(12, Math.floor(size * 0.6));
-	ctx.font = `700 ${fontSize}px 'Segoe UI', sans-serif`;
+	// start from a larger size and shrink until it fits within the ring
+	const family = "'Segoe UI', sans-serif";
+	// increase multiplier to make the font larger
+	let fontSize = Math.max(14, Math.floor(size * 0.95));
+	ctx.font = `700 ${fontSize}px ${family}`;
 	let metrics = ctx.measureText(timeText);
 	const maxWidth = radius * 1.6; // allow some padding inside the ring
-	while ((metrics.width > maxWidth || fontSize > radius * 0.6) && fontSize > 8) {
+	// shrink loop (keeps text from overflowing)
+	while ((metrics.width > maxWidth || fontSize > radius * 0.7) && fontSize > 8) {
 		fontSize--;
-		ctx.font = `700 ${fontSize}px 'Segoe UI', sans-serif`;
+		ctx.font = `700 ${fontSize}px ${family}`;
 		metrics = ctx.measureText(timeText);
 	}
 
