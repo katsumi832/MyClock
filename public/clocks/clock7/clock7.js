@@ -24,7 +24,7 @@
     const minFont = 8;
 
     // Desired vertical spacing factor (<1 to make rows closer). 0.75 -> 25% closer.
-    const verticalSpacingFactor = 0.75;
+    const verticalSpacingFactor = 0.90;
 
     // iterate down until the grid fits. Use the widest of the four digits for safe spacing.
     let digitW = 0;
