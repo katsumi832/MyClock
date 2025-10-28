@@ -354,8 +354,8 @@ function renderClock() {
     if (typeof window.renderClock3 === 'function') window.renderClock3(offCtx,w,h,fontPaint,size,new Date(),{bg:(appliedSettings.bgMode==='solid'?appliedSettings.bgGrad&&appliedSettings.bgGrad[0]:null),bgGradient:(appliedSettings.bgMode==='gradient'||appliedSettings.bgMode==='split'?appliedSettings.bgGrad:null),suppressBg:true});
     else lazyLoadClock(3);
   } else if (style === "Clock 4") {
-    if (typeof window.renderClock4 === 'function') window.renderClock4(offCtx,w,h,fontPaint,size,new Date(),{bg:(appliedSettings.bgMode==='solid'?appliedSettings.bgGrad&&appliedSettings.bgGrad[0]:null),bgGradient:(appliedSettings.bgMode==='gradient'||appliedSettings.bgMode==='split'?appliedSettings.bgGrad:null),suppressBg:true});
-    else lazyLoadClock(4);
+    // Use the local renderClock4 implementation (no lazy-load)
+    renderClock4(offCtx, w, h, fontPaint, size, new Date(), { suppressBg: true });
   } else if (style === "Clock 5") {
     if (typeof window.renderClock5 === 'function') window.renderClock5(offCtx,w,h,fontPaint,size,new Date(),{bg:(appliedSettings.bgMode==='solid'?appliedSettings.bgGrad&&appliedSettings.bgGrad[0]:null),bgGradient:(appliedSettings.bgMode==='gradient'||appliedSettings.bgMode==='split'?appliedSettings.bgGrad:null),suppressBg:true});
     else lazyLoadClock(5);
@@ -399,41 +399,96 @@ function lazyLoadClock(n) {
   document.body.appendChild(s);
 }
 
+// New: Clock 4 implementation (big ring + orbiting small dot + HH:MM center text)
+function renderClock4(ctx, w, h, fontPaint, size, now, opts) {
+	// draw on provided context (offscreen)
+	ctx.clearRect(0, 0, w, h);
+
+	const cx = w / 2;
+	const cy = h / 2;
+
+	// Big circle radius (use size but keep within canvas)
+	const radius = Math.min(w, h) * 0.38;
+
+	// Ring stroke — made thinner
+	// previous: Math.max(2, Math.floor(size * 0.04))
+	const ringWidth = Math.max(1, Math.floor(size * 0.02));
+	ctx.lineWidth = ringWidth;
+	try { ctx.strokeStyle = fontPaint; } catch (e) { ctx.strokeStyle = '#ffffff'; }
+	ctx.beginPath();
+	ctx.arc(cx, cy, radius, 0, Math.PI * 2);
+	ctx.stroke();
+
+	// Orbiting small dot (smooth using ms)
+	const sec = now.getSeconds() + (now.getMilliseconds() / 1000);
+	const angle = (sec / 60) * Math.PI * 2 - Math.PI / 2; // start at top
+	const dotRadius = Math.max(4, Math.floor(size * 0.055));
+	const sx = cx + Math.cos(angle) * radius;
+	const sy = cy + Math.sin(angle) * radius;
+
+	try { ctx.fillStyle = fontPaint; } catch (e) { ctx.fillStyle = '#ffffff'; }
+	ctx.beginPath();
+	ctx.arc(sx, sy, dotRadius, 0, Math.PI * 2);
+	ctx.fill();
+
+	// Center time: single line "HH:MM"
+	ctx.textAlign = 'center';
+	ctx.textBaseline = 'middle';
+	const hh = String(now.getHours()).padStart(2, '0');
+	const mm = String(now.getMinutes()).padStart(2, '0');
+	const timeText = `${hh}:${mm}`;
+
+	// choose a single font size that fits comfortably in the circle
+	// start from a large size and shrink until it fits within 80% of the circle diameter
+	let fontSize = Math.max(12, Math.floor(size * 0.6));
+	ctx.font = `700 ${fontSize}px 'Segoe UI', sans-serif`;
+	let metrics = ctx.measureText(timeText);
+	const maxWidth = radius * 1.6; // allow some padding inside the ring
+	while ((metrics.width > maxWidth || fontSize > radius * 0.6) && fontSize > 8) {
+		fontSize--;
+		ctx.font = `700 ${fontSize}px 'Segoe UI', sans-serif`;
+		metrics = ctx.measureText(timeText);
+	}
+
+	// draw the single-line time centered
+	ctx.fillText(timeText, cx, cy);
+}
+
 function drawPreview() {
-  const { styleIndex, color, size, mode } = editingSettings;
-  const w = canvas.width;
-  const h = canvas.height;
-  // Do not paint a preview background — keep preview transparent
-  ctx.clearRect(0, 0, w, h);
+	const { styleIndex, color, size, mode } = editingSettings;
+	const w = canvas.width;
+	const h = canvas.height;
+	// Do not paint a preview background — keep preview transparent
+	ctx.clearRect(0, 0, w, h);
 
-  // Render clock to offscreen canvas then composite so per-clock clearRect doesn't remove the background
-  const off = document.createElement('canvas'); off.width = w; off.height = h;
-  const offCtx = off.getContext('2d');
+	// Render clock to offscreen canvas then composite so per-clock clearRect doesn't remove the background
+	const off = document.createElement('canvas'); off.width = w; off.height = h;
+	const offCtx = off.getContext('2d');
 
-  // prepare font paint for preview
-  let fontPaint = color;
-  if (editingSettings.fontMode === 'gradient' || editingSettings.fontMode === 'split') {
-    const fg = editingSettings.fontGrad || [color, '#ffffff', 'vertical'];
-    fontPaint = makeGradient(offCtx, w, h, fg[0], fg[1], fg[2]);
-  }
+	// prepare font paint for preview
+	let fontPaint = color;
+	if (editingSettings.fontMode === 'gradient' || editingSettings.fontMode === 'split') {
+		const fg = editingSettings.fontGrad || [color, '#ffffff', 'vertical'];
+		fontPaint = makeGradient(offCtx, w, h, fg[0], fg[1], fg[2]);
+	}
 
-  // Use the chosen `size` directly for preview so the clock doesn't shrink
-  const previewSize = size;
+	// Use the chosen `size` directly for preview so the clock doesn't shrink
+	const previewSize = size;
 
-  const style = clockStyles[styleIndex];
-  if (style === "Clock 1") {
-    if (typeof window.renderClock1 === 'function') window.renderClock1(offCtx,w,h,fontPaint,previewSize,new Date(),{bg:(editingSettings.bgMode==='solid'?editingSettings.bgGrad&&editingSettings.bgGrad[0]:null),bgGradient:(editingSettings.bgMode==='gradient'||editingSettings.bgMode==='split'?editingSettings.bgGrad:null),suppressBg:true});
-    else lazyLoadClock(1);
-  } else if (style === "Clock 2") {
+	const style = clockStyles[styleIndex];
+	if (style === "Clock 1") {
+		if (typeof window.renderClock1 === 'function') window.renderClock1(offCtx,w,h,fontPaint,previewSize,new Date(),{bg:(editingSettings.bgMode==='solid'?editingSettings.bgGrad&&editingSettings.bgGrad[0]:null),bgGradient:(editingSettings.bgMode==='gradient'||editingSettings.bgMode==='split'?editingSettings.bgGrad:null),suppressBg:true});
+		else lazyLoadClock(1);
+	} else if (style === "Clock 2") {
   if (typeof window.renderClock2 === 'function') window.renderClock2(offCtx,w,h,fontPaint,Math.round(previewSize*0.8),new Date(),{bg:(editingSettings.bgMode==='solid'?editingSettings.bgGrad&&editingSettings.bgGrad[0]:null),bgGradient:(editingSettings.bgMode==='gradient'||editingSettings.bgMode==='split'?editingSettings.bgGrad:null),suppressBg:true});
     else lazyLoadClock(2);
   } else if (style === "Clock 3") {
   if (typeof window.renderClock3 === 'function') window.renderClock3(offCtx,w,h,fontPaint,previewSize,new Date(),{bg:(editingSettings.bgMode==='solid'?editingSettings.bgGrad&&editingSettings.bgGrad[0]:null),bgGradient:(editingSettings.bgMode==='gradient'||editingSettings.bgMode==='split'?editingSettings.bgGrad:null),suppressBg:true});
     else lazyLoadClock(3);
   } else if (style === "Clock 4") {
-  if (typeof window.renderClock4 === 'function') window.renderClock4(offCtx,w,h,fontPaint,previewSize,new Date(),{bg:(editingSettings.bgMode==='solid'?editingSettings.bgGrad&&editingSettings.bgGrad[0]:null),bgGradient:(editingSettings.bgMode==='gradient'||editingSettings.bgMode==='split'?editingSettings.bgGrad:null),suppressBg:true});
-    else lazyLoadClock(4);
-  } else if (style === "Clock 5") {
+		// preview uses same local renderer for Clock 4
+		renderClock4(offCtx, w, h, fontPaint, previewSize, new Date(), { suppressBg: true });
+	} else if (style === "Clock 5") {
   if (typeof window.renderClock5 === 'function') window.renderClock5(offCtx,w,h,fontPaint,previewSize,new Date(),{bg:(editingSettings.bgMode==='solid'?editingSettings.bgGrad&&editingSettings.bgGrad[0]:null),bgGradient:(editingSettings.bgMode==='gradient'||editingSettings.bgMode==='split'?editingSettings.bgGrad:null),suppressBg:true});
     else lazyLoadClock(5);
   } else if (style === "Clock 6") {
