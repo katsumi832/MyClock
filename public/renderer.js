@@ -112,54 +112,7 @@ sizeLabel.textContent = editingSettings.size;
 if (fontGradC1) fontGradC1.value = editingSettings.fontGrad[0];
 if (fontGradC2) fontGradC2.value = editingSettings.fontGrad[1];
 if (fontGradPattern) fontGradPattern.value = editingSettings.fontGrad[2];
-// background gradient inputs are no longer used; keep variables only if DOM exists but do not use them
-if (bgGradC1) bgGradC1.value = editingSettings.bgGrad[0];
-if (bgGradC2) bgGradC2.value = editingSettings.bgGrad[1];
-if (bgGradPattern) bgGradPattern.value = editingSettings.bgGrad[2];
-
-// Render the half-swatch button for background special swatch
-function renderBgHalfSwatch() {
-  const btn = document.getElementById('bg-half-swatch');
-  if (!btn) return;
-  const c = document.createElement('canvas'); c.width = 40; c.height = 40;
-  const t = c.getContext('2d');
-  const [c1,c2,pat] = editingSettings.bgGrad || ['#C800FF', '#00EBE7','vertical'];
-  // draw left half
-  t.beginPath(); t.moveTo(20,20); t.arc(20,20,18,Math.PI/2,Math.PI*3/2); t.closePath(); t.fillStyle = c1; t.fill();
-  // draw right half
-  t.beginPath(); t.moveTo(20,20); t.arc(20,20,18,Math.PI*3/2,Math.PI/2); t.closePath(); t.fillStyle = c2; t.fill();
-  btn.style.backgroundImage = `url(${c.toDataURL()})`;
-  btn.classList.toggle('selected', editingSettings.bgMode === 'gradient');
-  btn.onclick = () => {
-    // activate background gradient editing and ensure bgMode=gradient
-    editingSettings.bgMode = 'gradient';
-    if (!editingSettings.bgGrad || editingSettings.bgGrad.length < 2) editingSettings.bgGrad = [editingSettings.bgGrad && editingSettings.bgGrad[0] ? editingSettings.bgGrad[0] : '#000','#071b14','vertical'];
-    const bCtr = document.getElementById('bg-gradient-controls'); if (bCtr) bCtr.classList.remove('hidden');
-    // focus first color input for quick editing
-    setTimeout(() => { const el = document.getElementById('bg-grad-c1'); if (el) el.focus(); }, 0);
-    renderBgHalfSwatch();
-    drawPreview();
-  };
-}
-renderBgHalfSwatch();
-
-function updateGradientUI() {
-  const fCtr = document.getElementById('font-gradient-controls');
-  // background gradient UI removed; only toggle font gradient controls
-  if (fCtr) fCtr.classList.toggle('hidden', editingSettings.fontMode !== 'gradient');
-}
-// gradient controls are only shown when user activates a half-swatch
-if (fontGradC1) fontGradC1.addEventListener('input', (e)=>{ editingSettings.fontGrad[0]=e.target.value; drawPreview(); });
-if (fontGradC2) fontGradC2.addEventListener('input', (e)=>{ editingSettings.fontGrad[1]=e.target.value; drawPreview(); });
-if (fontGradPattern) fontGradPattern.addEventListener('change', (e)=>{ editingSettings.fontGrad[2]=e.target.value; drawPreview(); });
-// removed bg gradient event listeners to avoid background editing
-// if (bgGradC1) bgGradC1.addEventListener('input', (e)=>{ editingSettings.bgGrad[0]=e.target.value; drawPreview(); });
-// if (bgGradC2) bgGradC2.addEventListener('input', (e)=>{ editingSettings.bgGrad[1]=e.target.value; drawPreview(); });
-// if (bgGradPattern) bgGradPattern.addEventListener('change', (e)=>{ editingSettings.bgGrad[2]=e.target.value; drawPreview(); });
-
-// keep gradient controls hidden by default; they will be shown when user clicks half-swatch
-// initialize gradient control visibility
-updateGradientUI();
+// removed background gradient input initializers to avoid creating/using background controls
 
 // Render the half-swatch button for font special swatch
 function renderFontHalfSwatch() {
