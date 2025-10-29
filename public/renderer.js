@@ -672,4 +672,36 @@ function loop() {
   renderClock();
   requestAnimationFrame(loop);
 }
-loop();
+
+// Start rendering only after rounded fonts are requested and (ideally) loaded.
+// Replace the previous Poppins-only guard with this:
+(function startWhenRoundedReady(){
+  // Inject Google Fonts for rounded families if not already present
+  if (!document.querySelector('link[data-rounded]')) {
+    const link = document.createElement('link');
+    link.rel = 'stylesheet';
+    link.setAttribute('data-rounded', '1');
+    // M PLUS Rounded 1c (700/800) + Nunito (700/800). Poppins already injected earlier is OK too.
+    link.href = 'https://fonts.googleapis.com/css2?family=M+PLUS+Rounded+1c:wght@700;800&family=Nunito:wght@700;800&display=swap';
+    document.head.appendChild(link);
+  }
+  // Optionally keep existing Poppins link (harmless). Now wait for the rounded font.
+  const wants = [
+    '800 32px "M PLUS Rounded 1c"',
+    '800 32px "Nunito"',
+    '800 32px "Poppins"'
+  ];
+  if (document.fonts && document.fonts.load) {
+    const loads = Promise.all(wants.map(f => document.fonts.load(f)));
+    const timeout = new Promise(res => setTimeout(res, 1500));
+    Promise.race([loads, timeout]).then(() => {
+      loop();
+    });
+  } else {
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', () => loop());
+    } else {
+      loop();
+    }
+  }
+})();

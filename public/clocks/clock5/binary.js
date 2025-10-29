@@ -33,7 +33,8 @@
 
     // font + layout
     const weight = '800';
-    const family = "Poppins, Quicksand, Nunito, 'Segoe UI', system-ui, sans-serif";
+    // Prefer fully rounded corners (M PLUS Rounded 1c). Fall back to other rounded families.
+    const family = "'M PLUS Rounded 1c', Nunito, Quicksand, 'Cabin Rounded', 'Segoe UI', system-ui, sans-serif";
     const margin = Math.max(12, Math.floor(Math.min(w,h) * 0.02));
     const usableW = w - margin*2;
     const usableH = h - margin*2;
@@ -166,7 +167,7 @@
     ctx.drawImage(comp, 0, 0);
 
     // draw colon on top in semi-transparent white
-    ctx.fillStyle = 'rgba(255,255,255,0.35)';
+    ctx.fillStyle = 'rgba(255,255,255,0.6)';
     for (let i=0;i<chars.length;i++){
       const ch = chars[i];
       const chW = measured[i];
