@@ -462,18 +462,22 @@ function renderClock4(ctx, w, h, fontPaint, size, now, opts) {
 // Clock 3: Flip clock (HHMM) split-flap style (bigger + single-color when solid)
 // ------------------
 let _flip3State = {
-  prevDigits: null
+  shown: null,                 // currently displayed digits ['H','H','M','M']
+  anims: [null, null, null, null], // per index: { from, to, start, dur }
+  dur: 600                     // ms per digit flip
 };
 function renderClock3(ctx, w, h, paint, size, now, opts) {
   now = now || new Date();
   const hh = String(now.getHours()).padStart(2, '0');
   const mm = String(now.getMinutes()).padStart(2, '0');
   const digits = [hh[0], hh[1], mm[0], mm[1]]; // no colon
+  if (!_flip3State.shown) _flip3State.shown = digits.slice();
+  const ts = now.getTime();
 
   // Bigger layout: nearly full height; adjust to fit width
-  let tileH = Math.floor(h * 0.95);              // push closer to full screen height
-  let tileW = Math.floor(tileH * 0.56);          // narrow tiles so font can be larger
-  const gap = Math.max(2, Math.floor(tileH * 0.03)); // smaller gaps
+  let tileH = Math.floor(h * 0.95);
+  let tileW = Math.floor(tileH * 0.56);
+  const gap = Math.max(2, Math.floor(tileH * 0.03));
   let totalW = tileW * 4 + gap * 3;
   const maxW = Math.floor(w * 0.96);
   if (totalW > maxW) {
@@ -497,59 +501,144 @@ function renderClock3(ctx, w, h, paint, size, now, opts) {
     c.fill();
   }
 
-  function drawTile(c, x, y, rw, rh, digit, color) {
+  // Plate drawing with hinge exactly at the middle
+  function drawPlate(c, x, y, rw, rh) {
     const plate = 'rgba(0,0,0,0.40)';
     const plateTop = 'rgba(0,0,0,0.45)';
     const plateBottom = 'rgba(0,0,0,0.50)';
     const radius = Math.floor(rw * 0.08);
-
+    const hingeY = y + rh / 2;
     roundRectFill(c, x, y, rw, rh, radius, plate);
-
-    c.save();
-    c.beginPath(); c.rect(x, y, rw, rh / 2); c.clip();
-    roundRectFill(c, x, y, rw, rh, radius, plateTop);
-    c.restore();
-
-    c.save();
-    c.beginPath(); c.rect(x, y + rh / 2, rw, rh / 2); c.clip();
-    roundRectFill(c, x, y, rw, rh, radius, plateBottom);
-    c.restore();
-
+    c.save(); c.beginPath(); c.rect(x, y, rw, rh / 2); c.clip(); roundRectFill(c, x, y, rw, rh, radius, plateTop); c.restore();
+    c.save(); c.beginPath(); c.rect(x, hingeY, rw, rh / 2); c.clip(); roundRectFill(c, x, y, rw, rh, radius, plateBottom); c.restore();
     c.strokeStyle = 'rgba(255,255,255,0.08)';
     c.lineWidth = Math.max(1, Math.floor(rh * 0.02));
     c.beginPath();
-    c.moveTo(x + radius, y + rh / 2);
-    c.lineTo(x + rw - radius, y + rh / 2);
+    c.moveTo(x + radius, hingeY);
+    c.lineTo(x + rw - radius, hingeY);
     c.stroke();
+  }
 
-    const weight = 700; // better match for Oswald bold
+  // Smooth easing (cubic in-out)
+  function easeInOutCubic(t) {
+    return t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2;
+  }
+
+  // Font helper (Oswald, consistent with current style)
+  function getFont(rh) {
+    const weight = 700;
     const family = '"Oswald", "Bebas Neue", "Roboto Condensed", "Segoe UI", system-ui, sans-serif';
-    const fontSize = Math.floor(rh * 0.92); // maximize digit height
+    const fontSize = Math.floor(rh * 0.92);
+    return { font: `${weight} ${fontSize}px ${family}`, weight, family, fontSize };
+  }
+
+  // Compute baseline offset so the digit visual center lands exactly on the hinge
+  function getBaselineOffset(c, font, digit, fontSize) {
+    c.save();
+    c.font = font;
+    const m = c.measureText(digit);
+    c.restore();
+    const asc = (m.actualBoundingBoxAscent != null) ? m.actualBoundingBoxAscent : fontSize * 0.8;
+    const dsc = (m.actualBoundingBoxDescent != null) ? m.actualBoundingBoxDescent : fontSize * 0.2;
+    // baselineOffset = baselineY - hingeY = (ascent - descent) / 2
+    return (asc - dsc) / 2;
+  }
+
+  // Static digit render (hinge exactly at digit’s middle)
+  function drawTileStatic(c, x, y, rw, rh, digit, color) {
+    drawPlate(c, x, y, rw, rh);
+    const { font, fontSize } = getFont(rh);
+    const hingeY = y + rh / 2;
+    const baseOff = getBaselineOffset(c, font, digit, fontSize);
     c.textAlign = 'center';
-    c.textBaseline = 'middle';
+    c.textBaseline = 'alphabetic';
     c.lineJoin = 'round';
     c.lineCap = 'round';
 
-    c.save();
-    c.beginPath(); c.rect(x, y, rw, rh / 2); c.clip();
-    c.fillStyle = color;
-    c.font = `${weight} ${fontSize}px ${family}`;
-    c.fillText(digit, x + rw / 2, y + rh / 2);
+    // Top half
+    c.save(); c.beginPath(); c.rect(x, y, rw, rh / 2); c.clip();
+    c.fillStyle = color; c.font = font;
+    c.fillText(digit, x + rw / 2, hingeY + baseOff);
     c.restore();
 
-    c.save();
-    c.beginPath(); c.rect(x, y + rh / 2, rw, rh / 2 + 1); c.clip();
-    c.fillStyle = color;
-    c.font = `${weight} ${fontSize}px ${family}`;
-    c.fillText(digit, x + rw / 2, y + rh / 2);
+    // Bottom half
+    c.save(); c.beginPath(); c.rect(x, hingeY, rw, rh / 2 + 1); c.clip();
+    c.fillStyle = color; c.font = font;
+    c.fillText(digit, x + rw / 2, hingeY + baseOff);
     c.restore();
 
+    // subtle shadow line on hinge
     c.strokeStyle = 'rgba(0,0,0,0.2)';
     c.lineWidth = Math.max(1, Math.floor(rh * 0.01));
     c.beginPath();
-    c.moveTo(x + radius, y + rh / 2 + c.lineWidth);
-    c.lineTo(x + rw - radius, y + rh / 2 + c.lineWidth);
+    c.moveTo(x + Math.floor(rw * 0.08), hingeY + c.lineWidth);
+    c.lineTo(x + rw - Math.floor(rw * 0.08), hingeY + c.lineWidth);
     c.stroke();
+  }
+
+  // Animated digit render (two-phase, eased, hinge-centered glyph)
+  function drawTileAnimated(c, x, y, rw, rh, fromDigit, toDigit, color, progress) {
+    drawPlate(c, x, y, rw, rh);
+    const { font, fontSize } = getFont(rh);
+    const hingeY = y + rh / 2;
+    const t = Math.max(0, Math.min(1, progress));
+    const t1 = easeInOutCubic(Math.min(1, t * 2));         // top flip
+    const t2 = easeInOutCubic(Math.max(0, (t - 0.5) * 2)); // bottom flip
+    const baseOffFrom = getBaselineOffset(c, font, fromDigit, fontSize);
+    const baseOffTo = getBaselineOffset(c, font, toDigit, fontSize);
+
+    c.textAlign = 'center';
+    c.textBaseline = 'alphabetic';
+    c.lineJoin = 'round';
+    c.lineCap = 'round';
+
+    // Top half static content: fromDigit until halfway, then toDigit
+    c.save(); c.beginPath(); c.rect(x, y, rw, rh / 2); c.clip();
+    c.fillStyle = color; c.font = font;
+    c.fillText(t < 0.5 ? fromDigit : toDigit, x + rw / 2, hingeY + (t < 0.5 ? baseOffFrom : baseOffTo));
+    c.restore();
+
+    // Bottom half static content: fromDigit always underneath the animated flap
+    c.save(); c.beginPath(); c.rect(x, hingeY, rw, rh / 2 + 1); c.clip();
+    c.fillStyle = color; c.font = font;
+    c.fillText(fromDigit, x + rw / 2, hingeY + baseOffFrom);
+    c.restore();
+
+    if (t < 0.5) {
+      // Phase 1: top half of current digit flips down (scaleY 1 → 0)
+      const sy = Math.max(0.0001, 1 - t1);
+      c.save();
+      c.beginPath(); c.rect(x, y, rw, rh / 2); c.clip();
+      c.translate(0, hingeY);
+      c.scale(1, sy);
+      c.fillStyle = color; c.font = font;
+      c.fillText(fromDigit, x + rw / 2, baseOffFrom);
+      // light shading as it flips away
+      c.globalCompositeOperation = 'multiply';
+      c.fillStyle = `rgba(0,0,0,${0.15 + 0.35 * (1 - sy)})`;
+      c.fillRect(x - 2, -rh, rw + 4, rh);
+      c.restore();
+    } else {
+      // Phase 2: bottom half of next digit flips down (scaleY 0 → 1)
+      const sy = Math.max(0.0001, t2);
+      c.save();
+      c.beginPath(); c.rect(x, hingeY, rw, rh / 2 + 1); c.clip();
+      c.translate(0, hingeY);
+      c.scale(1, sy);
+      c.fillStyle = color; c.font = font;
+      c.fillText(toDigit, x + rw / 2, baseOffTo);
+      // light shading as it flips in
+      c.globalCompositeOperation = 'multiply';
+      c.fillStyle = `rgba(0,0,0,${0.25 * (1 - sy)})`;
+      c.fillRect(x - 2, 0, rw + 4, rh);
+      c.restore();
+    }
+
+    // hinge highlight for depth
+    const shadeG = c.createLinearGradient(0, y, 0, y + rh);
+    shadeG.addColorStop(0.49, 'rgba(0,0,0,0.10)');
+    shadeG.addColorStop(0.51, 'rgba(255,255,255,0.04)');
+    c.save(); c.fillStyle = shadeG; c.fillRect(x, hingeY - 1, rw, 2); c.restore();
   }
 
   // positions: D0 D1 D2 D3 (no colon)
@@ -570,20 +659,39 @@ function renderClock3(ctx, w, h, paint, size, now, opts) {
   if (typeof paint === 'string' && paint.trim()) baseColor = paint;
   else if (typeof window !== 'undefined' && window.appliedSettings && window.appliedSettings.color) baseColor = window.appliedSettings.color;
 
-  // Use a single color for all digits when user selected a solid color.
-  // If a gradient/pattern is selected, apply it uniformly to all digits too.
-  const useUniform = true;
   const uniformColor = (paint && typeof paint !== 'string') ? paint : baseColor;
   const colorFor0 = uniformColor;
   const colorFor1 = uniformColor;
   const colorFor2 = uniformColor;
   const colorFor3 = uniformColor;
 
+  // Kick off animations for changed digits
+  for (let i = 0; i < 4; i++) {
+    if (_flip3State.shown[i] !== digits[i] && !_flip3State.anims[i]) {
+      _flip3State.anims[i] = { from: _flip3State.shown[i], to: digits[i], start: ts, dur: _flip3State.dur };
+    }
+  }
+
   // draw digit tiles
-  drawTile(ctx, x0, cy, tileW, tileH, digits[0], colorFor0);
-  drawTile(ctx, x1, cy, tileW, tileH, digits[1], colorFor1);
-  drawTile(ctx, x2, cy, tileW, tileH, digits[2], colorFor2);
-  drawTile(ctx, x3, cy, tileW, tileH, digits[3], colorFor3);
+  const tiles = [
+    { x: x0, color: colorFor0, i: 0 },
+    { x: x1, color: colorFor1, i: 1 },
+    { x: x2, color: colorFor2, i: 2 },
+    { x: x3, color: colorFor3, i: 3 },
+  ];
+  tiles.forEach(({ x, color, i }) => {
+    const anim = _flip3State.anims[i];
+    if (anim) {
+      const p = Math.min(1, (ts - anim.start) / anim.dur);
+      drawTileAnimated(ctx, x, cy, tileW, tileH, anim.from, anim.to, color, p);
+      if (p >= 1) {
+        _flip3State.shown[i] = anim.to;
+        _flip3State.anims[i] = null;
+      }
+    } else {
+      drawTileStatic(ctx, x, cy, tileW, tileH, _flip3State.shown[i], color);
+    }
+  });
 }
 
 function drawPreview() {
