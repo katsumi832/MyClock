@@ -351,8 +351,8 @@ function renderClock() {
     if (typeof window.renderClock2 === 'function') window.renderClock2(offCtx,w,h,fontPaint,size,new Date(),{bg:(appliedSettings.bgMode==='solid'?appliedSettings.bgGrad&&appliedSettings.bgGrad[0]:null),bgGradient:(appliedSettings.bgMode==='gradient'||appliedSettings.bgMode==='split'?appliedSettings.bgGrad:null),suppressBg:true});
     else lazyLoadClock(2);
   } else if (style === "Clock 3") {
-    if (typeof window.renderClock3 === 'function') window.renderClock3(offCtx,w,h,fontPaint,size,new Date(),{bg:(appliedSettings.bgMode==='solid'?appliedSettings.bgGrad&&appliedSettings.bgGrad[0]:null),bgGradient:(appliedSettings.bgMode==='gradient'||appliedSettings.bgMode==='split'?appliedSettings.bgGrad:null),suppressBg:true});
-    else lazyLoadClock(3);
+    // Flip clock (local implementation)
+    renderClock3(offCtx, w, h, fontPaint, size, new Date(), { suppressBg: true });
   } else if (style === "Clock 4") {
     // Use the local renderClock4 implementation (no lazy-load)
     renderClock4(offCtx, w, h, fontPaint, size, new Date(), { suppressBg: true });
@@ -458,37 +458,165 @@ function renderClock4(ctx, w, h, fontPaint, size, now, opts) {
 	ctx.fillText(timeText, cx, cy);
 }
 
+// ------------------
+// Clock 3: Flip clock (HHMM) split-flap style (bigger + single-color when solid)
+// ------------------
+let _flip3State = {
+  prevDigits: null
+};
+function renderClock3(ctx, w, h, paint, size, now, opts) {
+  now = now || new Date();
+  const hh = String(now.getHours()).padStart(2, '0');
+  const mm = String(now.getMinutes()).padStart(2, '0');
+  const digits = [hh[0], hh[1], mm[0], mm[1]]; // no colon
+
+  // Bigger layout: nearly full height; adjust to fit width
+  let tileH = Math.floor(h * 0.95);              // push closer to full screen height
+  let tileW = Math.floor(tileH * 0.56);          // narrow tiles so font can be larger
+  const gap = Math.max(2, Math.floor(tileH * 0.03)); // smaller gaps
+  let totalW = tileW * 4 + gap * 3;
+  const maxW = Math.floor(w * 0.96);
+  if (totalW > maxW) {
+    const scale = maxW / totalW;
+    tileW = Math.floor(tileW * scale);
+    tileH = Math.floor(tileH * scale);
+    totalW = tileW * 4 + gap * 3;
+  }
+  const cx = Math.floor((w - totalW) / 2);
+  const cy = Math.floor((h - tileH) / 2);
+
+  function roundRectFill(c, x, y, rw, rh, r, fill) {
+    c.beginPath();
+    c.moveTo(x + r, y);
+    c.arcTo(x + rw, y, x + rw, y + rh, r);
+    c.arcTo(x + rw, y + rh, x, y + rh, r);
+    c.arcTo(x, y + rh, x, y, r);
+    c.arcTo(x, y, x + rw, y, r);
+    c.closePath();
+    c.fillStyle = fill;
+    c.fill();
+  }
+
+  function drawTile(c, x, y, rw, rh, digit, color) {
+    const plate = 'rgba(0,0,0,0.40)';
+    const plateTop = 'rgba(0,0,0,0.45)';
+    const plateBottom = 'rgba(0,0,0,0.50)';
+    const radius = Math.floor(rw * 0.08);
+
+    roundRectFill(c, x, y, rw, rh, radius, plate);
+
+    c.save();
+    c.beginPath(); c.rect(x, y, rw, rh / 2); c.clip();
+    roundRectFill(c, x, y, rw, rh, radius, plateTop);
+    c.restore();
+
+    c.save();
+    c.beginPath(); c.rect(x, y + rh / 2, rw, rh / 2); c.clip();
+    roundRectFill(c, x, y, rw, rh, radius, plateBottom);
+    c.restore();
+
+    c.strokeStyle = 'rgba(255,255,255,0.08)';
+    c.lineWidth = Math.max(1, Math.floor(rh * 0.02));
+    c.beginPath();
+    c.moveTo(x + radius, y + rh / 2);
+    c.lineTo(x + rw - radius, y + rh / 2);
+    c.stroke();
+
+    const weight = 800;
+    const family = '"M PLUS Rounded 1c", Nunito, Poppins, "Segoe UI", system-ui, sans-serif';
+    const fontSize = Math.floor(rh * 0.92); // maximize digit height
+    c.textAlign = 'center';
+    c.textBaseline = 'middle';
+    c.lineJoin = 'round';
+    c.lineCap = 'round';
+
+    c.save();
+    c.beginPath(); c.rect(x, y, rw, rh / 2); c.clip();
+    c.fillStyle = color;
+    c.font = `${weight} ${fontSize}px ${family}`;
+    c.fillText(digit, x + rw / 2, y + rh / 2);
+    c.restore();
+
+    c.save();
+    c.beginPath(); c.rect(x, y + rh / 2, rw, rh / 2 + 1); c.clip();
+    c.fillStyle = color;
+    c.font = `${weight} ${fontSize}px ${family}`;
+    c.fillText(digit, x + rw / 2, y + rh / 2);
+    c.restore();
+
+    c.strokeStyle = 'rgba(0,0,0,0.2)';
+    c.lineWidth = Math.max(1, Math.floor(rh * 0.01));
+    c.beginPath();
+    c.moveTo(x + radius, y + rh / 2 + c.lineWidth);
+    c.lineTo(x + rw - radius, y + rh / 2 + c.lineWidth);
+    c.stroke();
+  }
+
+  // positions: D0 D1 D2 D3 (no colon)
+  const x0 = cx;
+  const x1 = x0 + tileW + gap;
+  const x2 = x1 + tileW + gap;
+  const x3 = x2 + tileW + gap;
+
+  // Helpers for color and lightening
+  function isHex(cstr){ return typeof cstr==='string' && /^#([0-9a-f]{3}|[0-9a-f]{6}|[0-9a-f]{8})$/i.test(cstr.trim()); }
+  function toRgb(hex){ hex = hex.replace('#',''); if (hex.length===3) hex = hex.split('').map(ch=>ch+ch).join(''); return { r: parseInt(hex.slice(0,2),16), g: parseInt(hex.slice(2,4),16), b: parseInt(hex.slice(4,6),16) }; }
+  function lightenHex(hex, amt){ try{ const {r,g,b}=toRgb(hex); const nr=Math.min(255,Math.round(r+(255-r)*amt)); const ng=Math.min(255,Math.round(g+(255-g)*amt)); const nb=Math.min(255,Math.round(b+(255-b)*amt)); return `rgb(${nr},${ng},${nb})`; }catch(e){ return hex; } }
+  function darkenHex(hex, amt){ try{ const {r,g,b}=toRgb(hex); const nr=Math.max(0,Math.round(r-(r)*amt)); const ng=Math.max(0,Math.round(g-(g)*amt)); const nb=Math.max(0,Math.round(b-(b)*amt)); return `rgb(${nr},${ng},${nb})`; }catch(e){ return hex; } }
+  function lumaFromRGB(r,g,b){ return (0.2126*r + 0.7152*g + 0.0722*b) / 255; }
+
+  // Base color (solid) or gradient/pattern from paint
+  let baseColor = '#ffffff';
+  if (typeof paint === 'string' && paint.trim()) baseColor = paint;
+  else if (typeof window !== 'undefined' && window.appliedSettings && window.appliedSettings.color) baseColor = window.appliedSettings.color;
+
+  // Use a single color for all digits when user selected a solid color.
+  // If a gradient/pattern is selected, apply it uniformly to all digits too.
+  const useUniform = true;
+  const uniformColor = (paint && typeof paint !== 'string') ? paint : baseColor;
+  const colorFor0 = uniformColor;
+  const colorFor1 = uniformColor;
+  const colorFor2 = uniformColor;
+  const colorFor3 = uniformColor;
+
+  // draw digit tiles
+  drawTile(ctx, x0, cy, tileW, tileH, digits[0], colorFor0);
+  drawTile(ctx, x1, cy, tileW, tileH, digits[1], colorFor1);
+  drawTile(ctx, x2, cy, tileW, tileH, digits[2], colorFor2);
+  drawTile(ctx, x3, cy, tileW, tileH, digits[3], colorFor3);
+}
+
 function drawPreview() {
-	const { styleIndex, color, size, mode } = editingSettings;
-	const w = canvas.width;
-	const h = canvas.height;
-	// Do not paint a preview background — keep preview transparent
-	ctx.clearRect(0, 0, w, h);
+  const { styleIndex, color, size, mode } = editingSettings;
+  const w = canvas.width;
+  const h = canvas.height;
+  // Do not paint a preview background — keep preview transparent
+  ctx.clearRect(0, 0, w, h);
 
-	// Render clock to offscreen canvas then composite so per-clock clearRect doesn't remove the background
-	const off = document.createElement('canvas'); off.width = w; off.height = h;
-	const offCtx = off.getContext('2d');
+  // Render clock to offscreen canvas then composite so per-clock clearRect doesn't remove the background
+  const off = document.createElement('canvas'); off.width = w; off.height = h;
+  const offCtx = off.getContext('2d');
 
-	// prepare font paint for preview
-	let fontPaint = color;
-	if (editingSettings.fontMode === 'gradient' || editingSettings.fontMode === 'split') {
-		const fg = editingSettings.fontGrad || [color, '#ffffff', 'vertical'];
-		fontPaint = makeGradient(offCtx, w, h, fg[0], fg[1], fg[2]);
-	}
+  // prepare font paint for preview
+  let fontPaint = color;
+  if (editingSettings.fontMode === 'gradient' || editingSettings.fontMode === 'split') {
+    const fg = editingSettings.fontGrad || [color, '#ffffff', 'vertical'];
+    fontPaint = makeGradient(offCtx, w, h, fg[0], fg[1], fg[2]);
+  }
 
-	// Use the chosen `size` directly for preview so the clock doesn't shrink
-	const previewSize = size;
+  // Use the chosen `size` directly for preview so the clock doesn't shrink
+  const previewSize = size;
 
-	const style = clockStyles[styleIndex];
-	if (style === "Clock 1") {
-		if (typeof window.renderClock1 === 'function') window.renderClock1(offCtx,w,h,fontPaint,previewSize,new Date(),{bg:(editingSettings.bgMode==='solid'?editingSettings.bgGrad&&editingSettings.bgGrad[0]:null),bgGradient:(editingSettings.bgMode==='gradient'||editingSettings.bgMode==='split'?editingSettings.bgGrad:null),suppressBg:true});
-		else lazyLoadClock(1);
-	} else if (style === "Clock 2") {
+  const style = clockStyles[styleIndex];
+  if (style === "Clock 1") {
+    if (typeof window.renderClock1 === 'function') window.renderClock1(offCtx,w,h,fontPaint,previewSize,new Date(),{bg:(editingSettings.bgMode==='solid'?editingSettings.bgGrad&&editingSettings.bgGrad[0]:null),bgGradient:(editingSettings.bgMode==='gradient'||editingSettings.bgMode==='split'?editingSettings.bgGrad:null),suppressBg:true});
+    else lazyLoadClock(1);
+  } else if (style === "Clock 2") {
   if (typeof window.renderClock2 === 'function') window.renderClock2(offCtx,w,h,fontPaint,Math.round(previewSize*0.8),new Date(),{bg:(editingSettings.bgMode==='solid'?editingSettings.bgGrad&&editingSettings.bgGrad[0]:null),bgGradient:(editingSettings.bgMode==='gradient'||editingSettings.bgMode==='split'?editingSettings.bgGrad:null),suppressBg:true});
     else lazyLoadClock(2);
   } else if (style === "Clock 3") {
-  if (typeof window.renderClock3 === 'function') window.renderClock3(offCtx,w,h,fontPaint,previewSize,new Date(),{bg:(editingSettings.bgMode==='solid'?editingSettings.bgGrad&&editingSettings.bgGrad[0]:null),bgGradient:(editingSettings.bgMode==='gradient'||editingSettings.bgMode==='split'?editingSettings.bgGrad:null),suppressBg:true});
-    else lazyLoadClock(3);
+    // Flip clock preview (local)
+    renderClock3(offCtx, w, h, fontPaint, previewSize, new Date(), { suppressBg: true });
   } else if (style === "Clock 4") {
 		// preview uses same local renderer for Clock 4
 		renderClock4(offCtx, w, h, fontPaint, previewSize, new Date(), { suppressBg: true });
