@@ -522,8 +522,8 @@ function renderClock3(ctx, w, h, paint, size, now, opts) {
     c.lineTo(x + rw - radius, y + rh / 2);
     c.stroke();
 
-    const weight = 800;
-    const family = '"M PLUS Rounded 1c", Nunito, Poppins, "Segoe UI", system-ui, sans-serif';
+    const weight = 700; // better match for Oswald bold
+    const family = '"Oswald", "Bebas Neue", "Roboto Condensed", "Segoe UI", system-ui, sans-serif';
     const fontSize = Math.floor(rh * 0.92); // maximize digit height
     c.textAlign = 'center';
     c.textBaseline = 'middle';
@@ -813,11 +813,20 @@ function loop() {
     link.href = 'https://fonts.googleapis.com/css2?family=M+PLUS+Rounded+1c:wght@700;800&family=Nunito:wght@700;800&display=swap';
     document.head.appendChild(link);
   }
+  // Inject sharp-cornered font for Clock 3 only
+  if (!document.querySelector('link[data-cornered]')) {
+    const link = document.createElement('link');
+    link.rel = 'stylesheet';
+    link.setAttribute('data-cornered', '1');
+    link.href = 'https://fonts.googleapis.com/css2?family=Oswald:wght@700&display=swap';
+    document.head.appendChild(link);
+  }
   // Optionally keep existing Poppins link (harmless). Now wait for the rounded font.
   const wants = [
     '800 32px "M PLUS Rounded 1c"',
     '800 32px "Nunito"',
-    '800 32px "Poppins"'
+    '800 32px "Poppins"',
+    '700 32px "Oswald"' // ensure cornered font is ready for Clock 3
   ];
   if (document.fonts && document.fonts.load) {
     const loads = Promise.all(wants.map(f => document.fonts.load(f)));
