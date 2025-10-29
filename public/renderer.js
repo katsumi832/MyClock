@@ -464,7 +464,7 @@ function renderClock4(ctx, w, h, fontPaint, size, now, opts) {
 let _flip3State = {
   shown: null,                 // currently displayed digits ['H','H','M','M']
   anims: [null, null, null, null], // per index: { from, to, start, dur }
-  dur: 600                     // ms per digit flip
+  dur: 800                     // ms per digit flip (smoother)
 };
 function renderClock3(ctx, w, h, paint, size, now, opts) {
   now = now || new Date();
@@ -501,30 +501,20 @@ function renderClock3(ctx, w, h, paint, size, now, opts) {
     c.fill();
   }
 
-  // Plate drawing with hinge exactly at the middle
+  // Plate drawing with hinge exactly at the middle (no center line)
   function drawPlate(c, x, y, rw, rh) {
     const plate = 'rgba(0,0,0,0.40)';
-    const plateTop = 'rgba(0,0,0,0.45)';
-    const plateBottom = 'rgba(0,0,0,0.50)';
     const radius = Math.floor(rw * 0.08);
-    const hingeY = y + rh / 2;
+    // single fill — no top/bottom overlays (prevents middle line)
     roundRectFill(c, x, y, rw, rh, radius, plate);
-    c.save(); c.beginPath(); c.rect(x, y, rw, rh / 2); c.clip(); roundRectFill(c, x, y, rw, rh, radius, plateTop); c.restore();
-    c.save(); c.beginPath(); c.rect(x, hingeY, rw, rh / 2); c.clip(); roundRectFill(c, x, y, rw, rh, radius, plateBottom); c.restore();
-    c.strokeStyle = 'rgba(255,255,255,0.08)';
-    c.lineWidth = Math.max(1, Math.floor(rh * 0.02));
-    c.beginPath();
-    c.moveTo(x + radius, hingeY);
-    c.lineTo(x + rw - radius, hingeY);
-    c.stroke();
   }
 
-  // Smooth easing (cubic in-out)
-  function easeInOutCubic(t) {
-    return t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2;
+  // Smooth easing (sine in-out) for gentler motion
+  function easeInOutSine(t) {
+    return 0.5 * (1 - Math.cos(Math.PI * Math.max(0, Math.min(1, t))));
   }
 
-  // Font helper (Oswald, consistent with current style)
+  // Font helper (Oswald)
   function getFont(rh) {
     const weight = 700;
     const family = '"Oswald", "Bebas Neue", "Roboto Condensed", "Segoe UI", system-ui, sans-serif';
@@ -534,111 +524,128 @@ function renderClock3(ctx, w, h, paint, size, now, opts) {
 
   // Compute baseline offset so the digit visual center lands exactly on the hinge
   function getBaselineOffset(c, font, digit, fontSize) {
-    c.save();
-    c.font = font;
+    c.save(); c.font = font;
     const m = c.measureText(digit);
     c.restore();
     const asc = (m.actualBoundingBoxAscent != null) ? m.actualBoundingBoxAscent : fontSize * 0.8;
     const dsc = (m.actualBoundingBoxDescent != null) ? m.actualBoundingBoxDescent : fontSize * 0.2;
-    // baselineOffset = baselineY - hingeY = (ascent - descent) / 2
     return (asc - dsc) / 2;
   }
 
-  // Static digit render (hinge exactly at digit’s middle)
+  // Render a digit into an offscreen bitmap once (avoids seam from double glyph draws)
+  function renderDigitBitmap(rw, rh, digit, color, font, hingeY, baseOff) {
+    const g = document.createElement('canvas');
+    g.width = rw; g.height = rh;
+    const gc = g.getContext('2d');
+    gc.textAlign = 'center';
+    gc.textBaseline = 'alphabetic';
+    gc.fillStyle = color;
+    gc.font = font;
+    gc.fillText(digit, rw / 2, hingeY + baseOff);
+    return g;
+  }
+
+  // Static digit render (no middle line — split by precise clips with half-pixel guard)
   function drawTileStatic(c, x, y, rw, rh, digit, color) {
     drawPlate(c, x, y, rw, rh);
     const { font, fontSize } = getFont(rh);
     const hingeY = y + rh / 2;
     const baseOff = getBaselineOffset(c, font, digit, fontSize);
-    c.textAlign = 'center';
-    c.textBaseline = 'alphabetic';
-    c.lineJoin = 'round';
-    c.lineCap = 'round';
+    const bmp = renderDigitBitmap(rw, rh, digit, color, font, hingeY - y, baseOff);
 
-    // Top half
-    c.save(); c.beginPath(); c.rect(x, y, rw, rh / 2); c.clip();
-    c.fillStyle = color; c.font = font;
-    c.fillText(digit, x + rw / 2, hingeY + baseOff);
-    c.restore();
+    const hingeLine = Math.floor(hingeY) + 0.5; // half-pixel to avoid overdraw
 
-    // Bottom half
-    c.save(); c.beginPath(); c.rect(x, hingeY, rw, rh / 2 + 1); c.clip();
-    c.fillStyle = color; c.font = font;
-    c.fillText(digit, x + rw / 2, hingeY + baseOff);
-    c.restore();
-
-    // subtle shadow line on hinge
-    c.strokeStyle = 'rgba(0,0,0,0.2)';
-    c.lineWidth = Math.max(1, Math.floor(rh * 0.01));
+    // top half
+    c.save();
     c.beginPath();
-    c.moveTo(x + Math.floor(rw * 0.08), hingeY + c.lineWidth);
-    c.lineTo(x + rw - Math.floor(rw * 0.08), hingeY + c.lineWidth);
-    c.stroke();
+    c.rect(x, y, rw, hingeLine - y);
+    c.clip();
+    c.drawImage(bmp, x, y);
+    c.restore();
+
+    // bottom half
+    c.save();
+    c.beginPath();
+    c.rect(x, hingeLine, rw, y + rh - hingeLine);
+    c.clip();
+    c.drawImage(bmp, x, y);
+    c.restore();
   }
 
-  // Animated digit render (two-phase, eased, hinge-centered glyph)
+  // Animated digit render (image-based transform around the hinge, no middle line)
   function drawTileAnimated(c, x, y, rw, rh, fromDigit, toDigit, color, progress) {
     drawPlate(c, x, y, rw, rh);
     const { font, fontSize } = getFont(rh);
     const hingeY = y + rh / 2;
+    const hingeLocal = hingeY - y;
     const t = Math.max(0, Math.min(1, progress));
-    const t1 = easeInOutCubic(Math.min(1, t * 2));         // top flip
-    const t2 = easeInOutCubic(Math.max(0, (t - 0.5) * 2)); // bottom flip
+    const tTopRaw = Math.min(1, t * 2);
+    const tBotRaw = Math.max(0, (t - 0.5) * 2);
+    const t1 = easeInOutSine(tTopRaw);
+    const t2 = easeInOutSine(tBotRaw);
     const baseOffFrom = getBaselineOffset(c, font, fromDigit, fontSize);
     const baseOffTo = getBaselineOffset(c, font, toDigit, fontSize);
 
-    c.textAlign = 'center';
-    c.textBaseline = 'alphabetic';
-    c.lineJoin = 'round';
-    c.lineCap = 'round';
+    const fromBmp = renderDigitBitmap(rw, rh, fromDigit, color, font, hingeLocal, baseOffFrom);
+    const toBmp   = renderDigitBitmap(rw, rh, toDigit,   color, font, hingeLocal, baseOffTo);
 
-    // Top half static content: fromDigit until halfway, then toDigit
-    c.save(); c.beginPath(); c.rect(x, y, rw, rh / 2); c.clip();
-    c.fillStyle = color; c.font = font;
-    c.fillText(t < 0.5 ? fromDigit : toDigit, x + rw / 2, hingeY + (t < 0.5 ? baseOffFrom : baseOffTo));
-    c.restore();
+    const hingeLine = Math.floor(hingeY) + 0.5;
 
-    // Bottom half static content: fromDigit always underneath the animated flap
-    c.save(); c.beginPath(); c.rect(x, hingeY, rw, rh / 2 + 1); c.clip();
-    c.fillStyle = color; c.font = font;
-    c.fillText(fromDigit, x + rw / 2, hingeY + baseOffFrom);
-    c.restore();
-
+    // Static layers
     if (t < 0.5) {
-      // Phase 1: top half of current digit flips down (scaleY 1 → 0)
-      const sy = Math.max(0.0001, 1 - t1);
+      // bottom remains FROM
       c.save();
-      c.beginPath(); c.rect(x, y, rw, rh / 2); c.clip();
-      c.translate(0, hingeY);
-      c.scale(1, sy);
-      c.fillStyle = color; c.font = font;
-      c.fillText(fromDigit, x + rw / 2, baseOffFrom);
-      // light shading as it flips away
-      c.globalCompositeOperation = 'multiply';
-      c.fillStyle = `rgba(0,0,0,${0.15 + 0.35 * (1 - sy)})`;
-      c.fillRect(x - 2, -rh, rw + 4, rh);
+      c.beginPath(); c.rect(x, hingeLine, rw, y + rh - hingeLine); c.clip();
+      c.drawImage(fromBmp, x, y);
       c.restore();
     } else {
-      // Phase 2: bottom half of next digit flips down (scaleY 0 → 1)
-      const sy = Math.max(0.0001, t2);
+      // top switches to TO
       c.save();
-      c.beginPath(); c.rect(x, hingeY, rw, rh / 2 + 1); c.clip();
-      c.translate(0, hingeY);
-      c.scale(1, sy);
-      c.fillStyle = color; c.font = font;
-      c.fillText(toDigit, x + rw / 2, baseOffTo);
-      // light shading as it flips in
-      c.globalCompositeOperation = 'multiply';
-      c.fillStyle = `rgba(0,0,0,${0.25 * (1 - sy)})`;
-      c.fillRect(x - 2, 0, rw + 4, rh);
+      c.beginPath(); c.rect(x, y, rw, hingeLine - y); c.clip();
+      c.drawImage(toBmp, x, y);
       c.restore();
     }
 
-    // hinge highlight for depth
-    const shadeG = c.createLinearGradient(0, y, 0, y + rh);
-    shadeG.addColorStop(0.49, 'rgba(0,0,0,0.10)');
-    shadeG.addColorStop(0.51, 'rgba(255,255,255,0.04)');
-    c.save(); c.fillStyle = shadeG; c.fillRect(x, hingeY - 1, rw, 2); c.restore();
+    // Animated flap
+    if (t < 0.5) {
+      // Phase 1: top of FROM flips down
+      const sy = Math.max(0.0001, 1 - t1);
+      const skewMax = 0.18;
+      const skew = (1 - sy) * skewMax;
+      c.save();
+      c.beginPath(); c.rect(x, y, rw, hingeLine - y); c.clip();
+      c.translate(0, hingeY);
+      c.transform(1, 0, skew, 1, 0, 0);
+      c.scale(1, sy);
+      c.drawImage(fromBmp, x, -hingeY + y);
+      // shading
+      const g = c.createLinearGradient(0, -rh, 0, 0);
+      g.addColorStop(0, `rgba(0,0,0,${0.25 * (1 - sy)})`);
+      g.addColorStop(1, 'rgba(0,0,0,0)');
+      c.globalCompositeOperation = 'multiply';
+      c.fillStyle = g;
+      c.fillRect(x - 2, -rh, rw + 4, rh);
+      c.restore();
+    } else {
+      // Phase 2: bottom of TO flips down
+      const sy = Math.max(0.0001, t2);
+      const skewMax = 0.18;
+      const skew = (1 - sy) * skewMax;
+      c.save();
+      c.beginPath(); c.rect(x, hingeLine, rw, y + rh - hingeLine); c.clip();
+      c.translate(0, hingeY);
+      c.transform(1, 0, skew, 1, 0, 0);
+      c.scale(1, sy);
+      c.drawImage(toBmp, x, -hingeY + y);
+      // shading
+      const g = c.createLinearGradient(0, 0, 0, rh);
+      g.addColorStop(0, `rgba(0,0,0,${0.20 * (1 - sy)})`);
+      g.addColorStop(1, 'rgba(0,0,0,0)');
+      c.globalCompositeOperation = 'multiply';
+      c.fillStyle = g;
+      c.fillRect(x - 2, 0, rw + 4, rh);
+      c.restore();
+    }
   }
 
   // positions: D0 D1 D2 D3 (no colon)
@@ -674,20 +681,17 @@ function renderClock3(ctx, w, h, paint, size, now, opts) {
 
   // draw digit tiles
   const tiles = [
-    { x: x0, color: colorFor0, i: 0 },
-    { x: x1, color: colorFor1, i: 1 },
-    { x: x2, color: colorFor2, i: 2 },
-    { x: x3, color: colorFor3, i: 3 },
+    { x: cx,                       color: uniformColor, i: 0 },
+    { x: cx + tileW + gap,         color: uniformColor, i: 1 },
+    { x: cx + (tileW + gap) * 2,   color: uniformColor, i: 2 },
+    { x: cx + (tileW + gap) * 3,   color: uniformColor, i: 3 },
   ];
   tiles.forEach(({ x, color, i }) => {
     const anim = _flip3State.anims[i];
     if (anim) {
       const p = Math.min(1, (ts - anim.start) / anim.dur);
       drawTileAnimated(ctx, x, cy, tileW, tileH, anim.from, anim.to, color, p);
-      if (p >= 1) {
-        _flip3State.shown[i] = anim.to;
-        _flip3State.anims[i] = null;
-      }
+      if (p >= 1) { _flip3State.shown[i] = anim.to; _flip3State.anims[i] = null; }
     } else {
       drawTileStatic(ctx, x, cy, tileW, tileH, _flip3State.shown[i], color);
     }
