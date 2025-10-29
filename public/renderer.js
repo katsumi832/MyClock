@@ -439,16 +439,17 @@ function renderClock4(ctx, w, h, fontPaint, size, now, opts) {
 
 	// choose a single font size that fits comfortably in the circle
 	// start from a larger size and shrink until it fits within the ring
+	// use a thinner font-weight for a lighter look
+	const fontWeight = '300';
 	const family = "'Segoe UI', sans-serif";
-	// increase multiplier to make the font larger
 	let fontSize = Math.max(14, Math.floor(size * 0.95));
-	ctx.font = `700 ${fontSize}px ${family}`;
+	ctx.font = `${fontWeight} ${fontSize}px ${family}`;
 	let metrics = ctx.measureText(timeText);
 	const maxWidth = radius * 1.6; // allow some padding inside the ring
 	// shrink loop (keeps text from overflowing)
 	while ((metrics.width > maxWidth || fontSize > radius * 0.7) && fontSize > 8) {
 		fontSize--;
-		ctx.font = `700 ${fontSize}px ${family}`;
+		ctx.font = `${fontWeight} ${fontSize}px ${family}`;
 		metrics = ctx.measureText(timeText);
 	}
 
