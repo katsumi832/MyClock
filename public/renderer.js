@@ -390,6 +390,8 @@ function renderClock() {
 }
 
 function lazyLoadClock(n) {
+  // Clock 4 uses local renderClock4; no external file to load
+  if (n === 4) return;
   const key = `_clock${n}Loading`;
   if (window[key]) return;
   window[key] = true;
