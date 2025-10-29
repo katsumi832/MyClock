@@ -442,12 +442,13 @@ function renderClock4(ctx, w, h, fontPaint, size, now, opts) {
 	// use a thinner font-weight for a lighter look
 	const fontWeight = '300';
 	const family = "'Segoe UI', sans-serif";
-	let fontSize = Math.max(14, Math.floor(size * 0.95));
+	// increased initial size to make the font bigger
+	let fontSize = Math.max(18, Math.floor(size * 1.25));
 	ctx.font = `${fontWeight} ${fontSize}px ${family}`;
 	let metrics = ctx.measureText(timeText);
 	const maxWidth = radius * 1.6; // allow some padding inside the ring
-	// shrink loop (keeps text from overflowing)
-	while ((metrics.width > maxWidth || fontSize > radius * 0.7) && fontSize > 8) {
+	// shrink loop (keeps text from overflowing) — allow slightly larger cap relative to radius
+	while ((metrics.width > maxWidth || fontSize > radius * 0.8) && fontSize > 8) {
 		fontSize--;
 		ctx.font = `${fontWeight} ${fontSize}px ${family}`;
 		metrics = ctx.measureText(timeText);
