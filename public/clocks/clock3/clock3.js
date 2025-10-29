@@ -30,7 +30,7 @@
 
   function getFont(rh) {
     const weight = 700;
-    const family = '"Oswald", "Bebas Neue", "Roboto Condensed", "Segoe UI", system-ui, sans-serif';
+    const family = '"Roboto Condensed", "Segoe UI", system-ui, sans-serif';
     const fontSize = Math.floor(rh * 0.92);
     return { font: `${weight} ${fontSize}px ${family}`, weight, family, fontSize };
   }
