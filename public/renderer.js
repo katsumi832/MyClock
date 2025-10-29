@@ -71,12 +71,12 @@ let appliedSettings = { ...editingSettings };
 
 // カラーパレット (expanded)
 const palette = [
-  "#00ff88","#2196f3","#ff4081","#ff9800","#ffffff",
+  "#2196f3","#ff4081","#ff9800","#ffffff","#00ff88",
   "#ffd600","#8e24aa","#00bcd4","#4caf50","#e91e63",
   "#9e9d24","#795548","#607d8b","#f06292","#ff7043",
   "#c2185b","#7c4dff","#03a9f4","#388e3c","#ffeb3b",
   "#ad1457","#00c853","#b388ff","#ff8a65","#d500f9",
-  "#263238","#ff5252","#ffab00","#304ffe","#69f0ae","#000000"
+  "#263238","#ff5252","#ffab00","#304ffe","#69f0ae"
 ];
 function renderColorOptions() {
   colorOptionsDiv.innerHTML = "";

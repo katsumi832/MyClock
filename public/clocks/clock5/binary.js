@@ -10,17 +10,29 @@
     const chars = [hh[0], hh[1], ':', mm[0], mm[1]];
 
     // color helpers
-    function isHex(c) { return typeof c === 'string' && /^#([0-9a-f]{3}|[0-9a-f]{6})$/i.test(c.trim()); }
+    function isHex(c) { return typeof c === 'string' && /^#([0-9a-f]{3}|[0-9a-f]{6}|[0-9a-f]{8})$/i.test(c.trim()); }
     function toRgb(hex) { hex = hex.replace('#',''); if (hex.length===3) hex = hex.split('').map(ch=>ch+ch).join(''); return { r: parseInt(hex.slice(0,2),16), g: parseInt(hex.slice(2,4),16), b: parseInt(hex.slice(4,6),16) }; }
     function lightenHex(hex, amt) { try { const {r,g,b}=toRgb(hex); const nr=Math.min(255,Math.round(r+(255-r)*amt)); const ng=Math.min(255,Math.round(g+(255-g)*amt)); const nb=Math.min(255,Math.round(b+(255-b)*amt)); return `rgb(${nr},${ng},${nb})`; } catch(e){ return hex; } }
+    function isWhiteColor(c) {
+      if (typeof c !== 'string') return false;
+      const s = c.trim().toLowerCase();
+      return s === '#fff' || s === '#ffffff' || s === '#ffffffff' ||
+             s === 'white' || /^rgba?\(\s*255\s*,\s*255\s*,\s*255(\s*,\s*1(\.0+)?)?\s*\)$/.test(s);
+    }
 
-    // determine user color
-    let selectedColor = '#FF80AB';
-    if (typeof paint === 'string' && paint.trim().length) selectedColor = paint;
-    else if (window && window.editingSettings && window.editingSettings.color) selectedColor = window.editingSettings.color;
+    // determine user color (Clock 5 special default: #ff4081 only when incoming is app default white)
+    let selectedColor = '#ff4081';
+    if (typeof paint === 'string' && paint.trim().length) {
+      selectedColor = isWhiteColor(paint) ? '#ff4081' : paint;
+    } else if (window && window.editingSettings && window.editingSettings.color) {
+      const c = window.editingSettings.color;
+      selectedColor = isWhiteColor(c) ? '#ff4081' : c;
+    }
+    // compute lighter variant for second digits
     let lighterColor = selectedColor;
-    if (isHex(selectedColor)) lighterColor = lightenHex(selectedColor, 0.36);
-    else if (/^rgb/i.test(selectedColor)) {
+    if (isHex(selectedColor)) {
+      lighterColor = lightenHex(selectedColor, 0.36);
+    } else if (/^rgb/i.test(selectedColor)) {
       const nums = selectedColor.match(/[\d.]+/g) || [];
       if (nums.length >= 3) {
         const r = Number(nums[0]), g = Number(nums[1]), b = Number(nums[2]);
