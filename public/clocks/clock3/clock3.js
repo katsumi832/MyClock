@@ -22,6 +22,7 @@
   }
 
   function drawPlate(c, x, y, rw, rh) {
+    // single fill — no top/bottom overlays, no stroke at hinge
     const plate = 'rgba(0,0,0,0.40)';
     const radius = Math.floor(rw * 0.08);
     roundRectFill(c, x, y, rw, rh, radius, plate);
@@ -55,6 +56,12 @@
     return g;
   }
 
+  // helper: overlap for hinge to avoid any seam
+  function hingeOverlap() {
+    const dpr = (typeof window !== 'undefined' && window.devicePixelRatio) ? window.devicePixelRatio : 1;
+    return Math.max(1, Math.round(dpr)); // 1–2 px typically
+  }
+
   function drawTileStatic(c, x, y, rw, rh, digit, color) {
     drawPlate(c, x, y, rw, rh);
     const { font, fontSize } = getFont(rh);
@@ -62,13 +69,25 @@
     const baseOff = getBaselineOffset(c, font, digit, fontSize);
     const bmp = renderDigitBitmap(rw, rh, digit, color, font, hingeY - y, baseOff);
 
-    const hingeLine = Math.floor(hingeY) + 0.5;
+    // Use integer hinge and overlap to remove the seam
+    const hingeI = Math.round(hingeY);
+    const ov = hingeOverlap();
 
-    c.save(); c.beginPath(); c.rect(x, y, rw, hingeLine - y); c.clip();
-    c.drawImage(bmp, x, y); c.restore();
+    // top half (extend down by overlap)
+    c.save();
+    c.beginPath();
+    c.rect(x, y, rw, (hingeI + ov) - y);
+    c.clip();
+    c.drawImage(bmp, x, y);
+    c.restore();
 
-    c.save(); c.beginPath(); c.rect(x, hingeLine, rw, y + rh - hingeLine); c.clip();
-    c.drawImage(bmp, x, y); c.restore();
+    // bottom half (start a bit above by overlap)
+    c.save();
+    c.beginPath();
+    c.rect(x, hingeI - ov, rw, y + rh - (hingeI - ov));
+    c.clip();
+    c.drawImage(bmp, x, y);
+    c.restore();
   }
 
   function drawTileAnimated(c, x, y, rw, rh, fromDigit, toDigit, color, progress) {
@@ -87,43 +106,58 @@
     const fromBmp = renderDigitBitmap(rw, rh, fromDigit, color, font, hingeLocal, baseOffFrom);
     const toBmp   = renderDigitBitmap(rw, rh, toDigit,   color, font, hingeLocal, baseOffTo);
 
-    const hingeLine = Math.floor(hingeY) + 0.5;
+    // Integer hinge + overlap to avoid seam
+    const hingeI = Math.round(hingeY);
+    const ov = hingeOverlap();
 
+    // Static layers under the moving flap
     if (t < 0.5) {
-      c.save(); c.beginPath(); c.rect(x, hingeLine, rw, y + rh - hingeLine); c.clip();
-      c.drawImage(fromBmp, x, y); c.restore();
+      // bottom remains FROM
+      c.save();
+      c.beginPath(); c.rect(x, hingeI - ov, rw, y + rh - (hingeI - ov)); c.clip();
+      c.drawImage(fromBmp, x, y);
+      c.restore();
     } else {
-      c.save(); c.beginPath(); c.rect(x, y, rw, hingeLine - y); c.clip();
-      c.drawImage(toBmp, x, y); c.restore();
+      // top switches to TO
+      c.save();
+      c.beginPath(); c.rect(x, y, rw, (hingeI + ov) - y); c.clip();
+      c.drawImage(toBmp, x, y);
+      c.restore();
     }
 
+    // Animated flap
+    const skewMax = 0.12; // slightly reduced for smoother feel
     if (t < 0.5) {
+      // Phase 1: top of FROM flips down
       const sy = Math.max(0.0001, 1 - t1);
-      const skewMax = 0.18, skew = (1 - sy) * skewMax;
+      const skew = (1 - sy) * skewMax;
       c.save();
-      c.beginPath(); c.rect(x, y, rw, hingeLine - y); c.clip();
+      c.beginPath(); c.rect(x, y, rw, (hingeI + ov) - y); c.clip();
       c.translate(0, hingeY);
       c.transform(1, 0, skew, 1, 0, 0);
       c.scale(1, sy);
       c.drawImage(fromBmp, x, -hingeY + y);
+      // softer shading as it flips away
       const g = c.createLinearGradient(0, -rh, 0, 0);
-      g.addColorStop(0, `rgba(0,0,0,${0.25 * (1 - sy)})`);
+      g.addColorStop(0, `rgba(0,0,0,${0.18 * (1 - sy)})`);
       g.addColorStop(1, 'rgba(0,0,0,0)');
       c.globalCompositeOperation = 'multiply';
       c.fillStyle = g;
       c.fillRect(x - 2, -rh, rw + 4, rh);
       c.restore();
     } else {
+      // Phase 2: bottom of TO flips down
       const sy = Math.max(0.0001, t2);
-      const skewMax = 0.18, skew = (1 - sy) * skewMax;
+      const skew = (1 - sy) * skewMax;
       c.save();
-      c.beginPath(); c.rect(x, hingeLine, rw, y + rh - hingeLine); c.clip();
+      c.beginPath(); c.rect(x, hingeI - ov, rw, y + rh - (hingeI - ov)); c.clip();
       c.translate(0, hingeY);
       c.transform(1, 0, skew, 1, 0, 0);
       c.scale(1, sy);
       c.drawImage(toBmp, x, -hingeY + y);
+      // softer shading as it flips in
       const g = c.createLinearGradient(0, 0, 0, rh);
-      g.addColorStop(0, `rgba(0,0,0,${0.20 * (1 - sy)})`);
+      g.addColorStop(0, `rgba(0,0,0,${0.12 * (1 - sy)})`);
       g.addColorStop(1, 'rgba(0,0,0,0)');
       c.globalCompositeOperation = 'multiply';
       c.fillStyle = g;
