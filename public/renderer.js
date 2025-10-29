@@ -1,7 +1,7 @@
 // renderer.js
-// ================================
-// Apple風デザイン Clock アプリ
-// ================================
+// ===========
+// Clock App
+// ===========
 
 // ------------------
 // 初期設定
@@ -406,13 +406,6 @@ function lazyLoadClock(n) {
   s.onload = () => { /* loaded */ };
   document.body.appendChild(s);
 }
-
-// ------------------
-// Clock 3 and Clock 4 local implementations
-// ------------------
-// Clock 4: renderClock4(...) — local implementation
-// Clock 3: renderClock3(...) — local implementation
-// (both moved to external files: clocks/clock4/clock4.js and clocks/clock3/clock3.js)
 
 function drawPreview() {
   const { styleIndex, color, size, mode } = editingSettings;
