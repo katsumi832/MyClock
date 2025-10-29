@@ -2,7 +2,7 @@
   const state = {
     shown: null,
     anims: [null, null, null, null],
-    dur: 800
+    dur: 900
   };
 
   function easeInOutSine(t) {
