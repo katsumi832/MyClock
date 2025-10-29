@@ -351,11 +351,19 @@ function renderClock() {
     if (typeof window.renderClock2 === 'function') window.renderClock2(offCtx,w,h,fontPaint,size,new Date(),{bg:(appliedSettings.bgMode==='solid'?appliedSettings.bgGrad&&appliedSettings.bgGrad[0]:null),bgGradient:(appliedSettings.bgMode==='gradient'||appliedSettings.bgMode==='split'?appliedSettings.bgGrad:null),suppressBg:true});
     else lazyLoadClock(2);
   } else if (style === "Clock 3") {
-    // Flip clock (local implementation)
-    renderClock3(offCtx, w, h, fontPaint, size, new Date(), { suppressBg: true });
+    // Use external Clock 3 implementation (lazy-load if needed)
+    if (typeof window.renderClock3 === 'function') {
+      window.renderClock3(offCtx, w, h, fontPaint, size, new Date(), { suppressBg: true });
+    } else {
+      lazyLoadClock(3);
+    }
   } else if (style === "Clock 4") {
-    // Use the local renderClock4 implementation (no lazy-load)
-    renderClock4(offCtx, w, h, fontPaint, size, new Date(), { suppressBg: true });
+    // Use external Clock 4 implementation (lazy-load if needed)
+    if (typeof window.renderClock4 === 'function') {
+      window.renderClock4(offCtx, w, h, fontPaint, size, new Date(), { suppressBg: true });
+    } else {
+      lazyLoadClock(4);
+    }
   } else if (style === "Clock 5") {
     if (typeof window.renderClock5 === 'function') window.renderClock5(offCtx,w,h,fontPaint,size,new Date(),{bg:(appliedSettings.bgMode==='solid'?appliedSettings.bgGrad&&appliedSettings.bgGrad[0]:null),bgGradient:(appliedSettings.bgMode==='gradient'||appliedSettings.bgMode==='split'?appliedSettings.bgGrad:null),suppressBg:true});
     else lazyLoadClock(5);
@@ -390,315 +398,21 @@ function renderClock() {
 }
 
 function lazyLoadClock(n) {
-  // Clock 4 uses local renderClock4; no external file to load
-  if (n === 4) return;
   const key = `_clock${n}Loading`;
   if (window[key]) return;
   window[key] = true;
   const s = document.createElement('script');
-  s.src = `clocks/clock${n}/${n===1? 'digital' : n===2? 'analog' : n===3? 'minimal' : n===4? 'dots' : n===5? 'binary' : n===6? 'clock6' : 'clock7'}.js`;
+  s.src = `clocks/clock${n}/${n===1? 'digital' : n===2? 'analog' : n===3? 'clock3' : n===4? 'clock4' : n===5? 'binary' : n===6? 'clock6' : 'clock7'}.js`;
   s.onload = () => { /* loaded */ };
   document.body.appendChild(s);
 }
 
-// New: Clock 4 implementation (big ring + orbiting small dot + HH:MM center text)
-function renderClock4(ctx, w, h, fontPaint, size, now, opts) {
-	// draw on provided context (offscreen)
-	ctx.clearRect(0, 0, w, h);
-
-	const cx = w / 2;
-	const cy = h / 2;
-
-	// Big circle radius (use size but keep within canvas)
-	const radius = Math.min(w, h) * 0.38;
-
-	// Ring stroke — made thinner
-	const ringWidth = Math.max(1, Math.floor(size * 0.02));
-	ctx.lineWidth = ringWidth;
-	try { ctx.strokeStyle = fontPaint; } catch (e) { ctx.strokeStyle = '#ffffff'; }
-	ctx.beginPath();
-	ctx.arc(cx, cy, radius, 0, Math.PI * 2);
-	ctx.stroke();
-
-	// Orbiting small dot (smooth using ms)
-	const sec = now.getSeconds() + (now.getMilliseconds() / 1000);
-	const angle = (sec / 60) * Math.PI * 2 - Math.PI / 2; // start at top
-	const dotRadius = Math.max(4, Math.floor(size * 0.055));
-	const sx = cx + Math.cos(angle) * radius;
-	const sy = cy + Math.sin(angle) * radius;
-
-	try { ctx.fillStyle = fontPaint; } catch (e) { ctx.fillStyle = '#ffffff'; }
-	ctx.beginPath();
-	ctx.arc(sx, sy, dotRadius, 0, Math.PI * 2);
-	ctx.fill();
-
-	// Center time: single line "HH:MM"
-	ctx.textAlign = 'center';
-	ctx.textBaseline = 'middle';
-	const hh = String(now.getHours()).padStart(2, '0');
-	const mm = String(now.getMinutes()).padStart(2, '0');
-	const timeText = `${hh}:${mm}`;
-
-	// choose a single font size that fits comfortably in the circle
-	// start from a larger size and shrink until it fits within the ring
-	// use a thinner font-weight for a lighter look
-	const fontWeight = '300';
-	const family = "'Segoe UI', sans-serif";
-	// increased initial size to make the font bigger
-	let fontSize = Math.max(18, Math.floor(size * 1.25));
-	ctx.font = `${fontWeight} ${fontSize}px ${family}`;
-	let metrics = ctx.measureText(timeText);
-	const maxWidth = radius * 1.6; // allow some padding inside the ring
-	// shrink loop (keeps text from overflowing) — allow slightly larger cap relative to radius
-	while ((metrics.width > maxWidth || fontSize > radius * 0.8) && fontSize > 8) {
-		fontSize--;
-		ctx.font = `${fontWeight} ${fontSize}px ${family}`;
-		metrics = ctx.measureText(timeText);
-	}
-
-	// draw the single-line time centered
-	ctx.fillText(timeText, cx, cy);
-}
-
 // ------------------
-// Clock 3: Flip clock (HHMM) split-flap style (bigger + single-color when solid)
+// Clock 3 and Clock 4 local implementations
 // ------------------
-let _flip3State = {
-  shown: null,                 // currently displayed digits ['H','H','M','M']
-  anims: [null, null, null, null], // per index: { from, to, start, dur }
-  dur: 800                     // ms per digit flip (smoother)
-};
-function renderClock3(ctx, w, h, paint, size, now, opts) {
-  now = now || new Date();
-  const hh = String(now.getHours()).padStart(2, '0');
-  const mm = String(now.getMinutes()).padStart(2, '0');
-  const digits = [hh[0], hh[1], mm[0], mm[1]]; // no colon
-  if (!_flip3State.shown) _flip3State.shown = digits.slice();
-  const ts = now.getTime();
-
-  // Bigger layout: nearly full height; adjust to fit width
-  let tileH = Math.floor(h * 0.95);
-  let tileW = Math.floor(tileH * 0.56);
-  const gap = Math.max(2, Math.floor(tileH * 0.03));
-  let totalW = tileW * 4 + gap * 3;
-  const maxW = Math.floor(w * 0.96);
-  if (totalW > maxW) {
-    const scale = maxW / totalW;
-    tileW = Math.floor(tileW * scale);
-    tileH = Math.floor(tileH * scale);
-    totalW = tileW * 4 + gap * 3;
-  }
-  const cx = Math.floor((w - totalW) / 2);
-  const cy = Math.floor((h - tileH) / 2);
-
-  function roundRectFill(c, x, y, rw, rh, r, fill) {
-    c.beginPath();
-    c.moveTo(x + r, y);
-    c.arcTo(x + rw, y, x + rw, y + rh, r);
-    c.arcTo(x + rw, y + rh, x, y + rh, r);
-    c.arcTo(x, y + rh, x, y, r);
-    c.arcTo(x, y, x + rw, y, r);
-    c.closePath();
-    c.fillStyle = fill;
-    c.fill();
-  }
-
-  // Plate drawing with hinge exactly at the middle (no center line)
-  function drawPlate(c, x, y, rw, rh) {
-    const plate = 'rgba(0,0,0,0.40)';
-    const radius = Math.floor(rw * 0.08);
-    // single fill — no top/bottom overlays (prevents middle line)
-    roundRectFill(c, x, y, rw, rh, radius, plate);
-  }
-
-  // Smooth easing (sine in-out) for gentler motion
-  function easeInOutSine(t) {
-    return 0.5 * (1 - Math.cos(Math.PI * Math.max(0, Math.min(1, t))));
-  }
-
-  // Font helper (Oswald)
-  function getFont(rh) {
-    const weight = 700;
-    const family = '"Oswald", "Bebas Neue", "Roboto Condensed", "Segoe UI", system-ui, sans-serif';
-    const fontSize = Math.floor(rh * 0.92);
-    return { font: `${weight} ${fontSize}px ${family}`, weight, family, fontSize };
-  }
-
-  // Compute baseline offset so the digit visual center lands exactly on the hinge
-  function getBaselineOffset(c, font, digit, fontSize) {
-    c.save(); c.font = font;
-    const m = c.measureText(digit);
-    c.restore();
-    const asc = (m.actualBoundingBoxAscent != null) ? m.actualBoundingBoxAscent : fontSize * 0.8;
-    const dsc = (m.actualBoundingBoxDescent != null) ? m.actualBoundingBoxDescent : fontSize * 0.2;
-    return (asc - dsc) / 2;
-  }
-
-  // Render a digit into an offscreen bitmap once (avoids seam from double glyph draws)
-  function renderDigitBitmap(rw, rh, digit, color, font, hingeY, baseOff) {
-    const g = document.createElement('canvas');
-    g.width = rw; g.height = rh;
-    const gc = g.getContext('2d');
-    gc.textAlign = 'center';
-    gc.textBaseline = 'alphabetic';
-    gc.fillStyle = color;
-    gc.font = font;
-    gc.fillText(digit, rw / 2, hingeY + baseOff);
-    return g;
-  }
-
-  // Static digit render (no middle line — split by precise clips with half-pixel guard)
-  function drawTileStatic(c, x, y, rw, rh, digit, color) {
-    drawPlate(c, x, y, rw, rh);
-    const { font, fontSize } = getFont(rh);
-    const hingeY = y + rh / 2;
-    const baseOff = getBaselineOffset(c, font, digit, fontSize);
-    const bmp = renderDigitBitmap(rw, rh, digit, color, font, hingeY - y, baseOff);
-
-    const hingeLine = Math.floor(hingeY) + 0.5; // half-pixel to avoid overdraw
-
-    // top half
-    c.save();
-    c.beginPath();
-    c.rect(x, y, rw, hingeLine - y);
-    c.clip();
-    c.drawImage(bmp, x, y);
-    c.restore();
-
-    // bottom half
-    c.save();
-    c.beginPath();
-    c.rect(x, hingeLine, rw, y + rh - hingeLine);
-    c.clip();
-    c.drawImage(bmp, x, y);
-    c.restore();
-  }
-
-  // Animated digit render (image-based transform around the hinge, no middle line)
-  function drawTileAnimated(c, x, y, rw, rh, fromDigit, toDigit, color, progress) {
-    drawPlate(c, x, y, rw, rh);
-    const { font, fontSize } = getFont(rh);
-    const hingeY = y + rh / 2;
-    const hingeLocal = hingeY - y;
-    const t = Math.max(0, Math.min(1, progress));
-    const tTopRaw = Math.min(1, t * 2);
-    const tBotRaw = Math.max(0, (t - 0.5) * 2);
-    const t1 = easeInOutSine(tTopRaw);
-    const t2 = easeInOutSine(tBotRaw);
-    const baseOffFrom = getBaselineOffset(c, font, fromDigit, fontSize);
-    const baseOffTo = getBaselineOffset(c, font, toDigit, fontSize);
-
-    const fromBmp = renderDigitBitmap(rw, rh, fromDigit, color, font, hingeLocal, baseOffFrom);
-    const toBmp   = renderDigitBitmap(rw, rh, toDigit,   color, font, hingeLocal, baseOffTo);
-
-    const hingeLine = Math.floor(hingeY) + 0.5;
-
-    // Static layers
-    if (t < 0.5) {
-      // bottom remains FROM
-      c.save();
-      c.beginPath(); c.rect(x, hingeLine, rw, y + rh - hingeLine); c.clip();
-      c.drawImage(fromBmp, x, y);
-      c.restore();
-    } else {
-      // top switches to TO
-      c.save();
-      c.beginPath(); c.rect(x, y, rw, hingeLine - y); c.clip();
-      c.drawImage(toBmp, x, y);
-      c.restore();
-    }
-
-    // Animated flap
-    if (t < 0.5) {
-      // Phase 1: top of FROM flips down
-      const sy = Math.max(0.0001, 1 - t1);
-      const skewMax = 0.18;
-      const skew = (1 - sy) * skewMax;
-      c.save();
-      c.beginPath(); c.rect(x, y, rw, hingeLine - y); c.clip();
-      c.translate(0, hingeY);
-      c.transform(1, 0, skew, 1, 0, 0);
-      c.scale(1, sy);
-      c.drawImage(fromBmp, x, -hingeY + y);
-      // shading
-      const g = c.createLinearGradient(0, -rh, 0, 0);
-      g.addColorStop(0, `rgba(0,0,0,${0.25 * (1 - sy)})`);
-      g.addColorStop(1, 'rgba(0,0,0,0)');
-      c.globalCompositeOperation = 'multiply';
-      c.fillStyle = g;
-      c.fillRect(x - 2, -rh, rw + 4, rh);
-      c.restore();
-    } else {
-      // Phase 2: bottom of TO flips down
-      const sy = Math.max(0.0001, t2);
-      const skewMax = 0.18;
-      const skew = (1 - sy) * skewMax;
-      c.save();
-      c.beginPath(); c.rect(x, hingeLine, rw, y + rh - hingeLine); c.clip();
-      c.translate(0, hingeY);
-      c.transform(1, 0, skew, 1, 0, 0);
-      c.scale(1, sy);
-      c.drawImage(toBmp, x, -hingeY + y);
-      // shading
-      const g = c.createLinearGradient(0, 0, 0, rh);
-      g.addColorStop(0, `rgba(0,0,0,${0.20 * (1 - sy)})`);
-      g.addColorStop(1, 'rgba(0,0,0,0)');
-      c.globalCompositeOperation = 'multiply';
-      c.fillStyle = g;
-      c.fillRect(x - 2, 0, rw + 4, rh);
-      c.restore();
-    }
-  }
-
-  // positions: D0 D1 D2 D3 (no colon)
-  const x0 = cx;
-  const x1 = x0 + tileW + gap;
-  const x2 = x1 + tileW + gap;
-  const x3 = x2 + tileW + gap;
-
-  // Helpers for color and lightening
-  function isHex(cstr){ return typeof cstr==='string' && /^#([0-9a-f]{3}|[0-9a-f]{6}|[0-9a-f]{8})$/i.test(cstr.trim()); }
-  function toRgb(hex){ hex = hex.replace('#',''); if (hex.length===3) hex = hex.split('').map(ch=>ch+ch).join(''); return { r: parseInt(hex.slice(0,2),16), g: parseInt(hex.slice(2,4),16), b: parseInt(hex.slice(4,6),16) }; }
-  function lightenHex(hex, amt){ try{ const {r,g,b}=toRgb(hex); const nr=Math.min(255,Math.round(r+(255-r)*amt)); const ng=Math.min(255,Math.round(g+(255-g)*amt)); const nb=Math.min(255,Math.round(b+(255-b)*amt)); return `rgb(${nr},${ng},${nb})`; }catch(e){ return hex; } }
-  function darkenHex(hex, amt){ try{ const {r,g,b}=toRgb(hex); const nr=Math.max(0,Math.round(r-(r)*amt)); const ng=Math.max(0,Math.round(g-(g)*amt)); const nb=Math.max(0,Math.round(b-(b)*amt)); return `rgb(${nr},${ng},${nb})`; }catch(e){ return hex; } }
-  function lumaFromRGB(r,g,b){ return (0.2126*r + 0.7152*g + 0.0722*b) / 255; }
-
-  // Base color (solid) or gradient/pattern from paint
-  let baseColor = '#ffffff';
-  if (typeof paint === 'string' && paint.trim()) baseColor = paint;
-  else if (typeof window !== 'undefined' && window.appliedSettings && window.appliedSettings.color) baseColor = window.appliedSettings.color;
-
-  const uniformColor = (paint && typeof paint !== 'string') ? paint : baseColor;
-  const colorFor0 = uniformColor;
-  const colorFor1 = uniformColor;
-  const colorFor2 = uniformColor;
-  const colorFor3 = uniformColor;
-
-  // Kick off animations for changed digits
-  for (let i = 0; i < 4; i++) {
-    if (_flip3State.shown[i] !== digits[i] && !_flip3State.anims[i]) {
-      _flip3State.anims[i] = { from: _flip3State.shown[i], to: digits[i], start: ts, dur: _flip3State.dur };
-    }
-  }
-
-  // draw digit tiles
-  const tiles = [
-    { x: cx,                       color: uniformColor, i: 0 },
-    { x: cx + tileW + gap,         color: uniformColor, i: 1 },
-    { x: cx + (tileW + gap) * 2,   color: uniformColor, i: 2 },
-    { x: cx + (tileW + gap) * 3,   color: uniformColor, i: 3 },
-  ];
-  tiles.forEach(({ x, color, i }) => {
-    const anim = _flip3State.anims[i];
-    if (anim) {
-      const p = Math.min(1, (ts - anim.start) / anim.dur);
-      drawTileAnimated(ctx, x, cy, tileW, tileH, anim.from, anim.to, color, p);
-      if (p >= 1) { _flip3State.shown[i] = anim.to; _flip3State.anims[i] = null; }
-    } else {
-      drawTileStatic(ctx, x, cy, tileW, tileH, _flip3State.shown[i], color);
-    }
-  });
-}
+// Clock 4: renderClock4(...) — local implementation
+// Clock 3: renderClock3(...) — local implementation
+// (both moved to external files: clocks/clock4/clock4.js and clocks/clock3/clock3.js)
 
 function drawPreview() {
   const { styleIndex, color, size, mode } = editingSettings;
@@ -729,13 +443,21 @@ function drawPreview() {
   if (typeof window.renderClock2 === 'function') window.renderClock2(offCtx,w,h,fontPaint,Math.round(previewSize*0.8),new Date(),{bg:(editingSettings.bgMode==='solid'?editingSettings.bgGrad&&editingSettings.bgGrad[0]:null),bgGradient:(editingSettings.bgMode==='gradient'||editingSettings.bgMode==='split'?editingSettings.bgGrad:null),suppressBg:true});
     else lazyLoadClock(2);
   } else if (style === "Clock 3") {
-    // Flip clock preview (local)
-    renderClock3(offCtx, w, h, fontPaint, previewSize, new Date(), { suppressBg: true });
+    // Flip clock preview (external, lazy-load if needed)
+    if (typeof window.renderClock3 === 'function') {
+      window.renderClock3(offCtx, w, h, fontPaint, previewSize, new Date(), { suppressBg: true });
+    } else {
+      lazyLoadClock(3);
+    }
   } else if (style === "Clock 4") {
-		// preview uses same local renderer for Clock 4
-		renderClock4(offCtx, w, h, fontPaint, previewSize, new Date(), { suppressBg: true });
-	} else if (style === "Clock 5") {
-  if (typeof window.renderClock5 === 'function') window.renderClock5(offCtx,w,h,fontPaint,previewSize,new Date(),{bg:(editingSettings.bgMode==='solid'?editingSettings.bgGrad&&editingSettings.bgGrad[0]:null),bgGradient:(editingSettings.bgMode==='gradient'||editingSettings.bgMode==='split'?editingSettings.bgGrad:null),suppressBg:true});
+    // preview uses external renderer for Clock 4
+    if (typeof window.renderClock4 === 'function') {
+      window.renderClock4(offCtx, w, h, fontPaint, previewSize, new Date(), { suppressBg: true });
+    } else {
+      lazyLoadClock(4);
+    }
+  } else if (style === "Clock 5") {
+    if (typeof window.renderClock5 === 'function') window.renderClock5(offCtx,w,h,fontPaint,previewSize,new Date(),{bg:(editingSettings.bgMode==='solid'?editingSettings.bgGrad&&editingSettings.bgGrad[0]:null),bgGradient:(editingSettings.bgMode==='gradient'||editingSettings.bgMode==='split'?editingSettings.bgGrad:null),suppressBg:true});
     else lazyLoadClock(5);
   } else if (style === "Clock 6") {
     if (typeof window.renderClock6 === 'function') {
