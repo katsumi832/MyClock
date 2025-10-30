@@ -252,6 +252,25 @@ function drawAnalog(ctx, w, h, color, size) {
   ctx.stroke();
 }
 
+// Add: helper to draw dot markers around the analog clock (no background)
+function drawAnalogDots(c, w, h, paint, size) {
+  const cx = w / 2, cy = h / 2;
+  const r = size; // align with analog radius
+  const ringR = r * 0.92; // slightly inside the ring
+  c.save();
+  try { c.fillStyle = paint; } catch (e) { c.fillStyle = '#ffffff'; }
+  for (let i = 0; i < 60; i++) {
+    const ang = (i * Math.PI) / 30 - Math.PI / 2;
+    const x = cx + Math.cos(ang) * ringR;
+    const y = cy + Math.sin(ang) * ringR;
+    const dotR = (i % 5 === 0)
+      ? Math.max(2, Math.round(size * 0.03))   // hour marks
+      : Math.max(1, Math.round(size * 0.012)); // minute marks
+    c.beginPath(); c.arc(x, y, dotR, 0, Math.PI * 2); c.fill();
+  }
+  c.restore();
+}
+
 function drawMinimal(ctx, w, h, color, size) {
   ctx.clearRect(0, 0, w, h);
   // removed filling a background color so canvas remains transparent
@@ -348,8 +367,20 @@ function renderClock() {
     if (typeof window.renderClock1 === 'function') window.renderClock1(offCtx,w,h,fontPaint,size,new Date(),{bg:(appliedSettings.bgMode==='solid'?appliedSettings.bgGrad&&appliedSettings.bgGrad[0]:null),bgGradient:(appliedSettings.bgMode==='gradient'||appliedSettings.bgMode==='split'?appliedSettings.bgGrad:null),suppressBg:true});
     else lazyLoadClock(1);
   } else if (style === "Clock 2") {
-    if (typeof window.renderClock2 === 'function') window.renderClock2(offCtx,w,h,fontPaint,size,new Date(),{bg:(appliedSettings.bgMode==='solid'?appliedSettings.bgGrad&&appliedSettings.bgGrad[0]:null),bgGradient:(appliedSettings.bgMode==='gradient'||appliedSettings.bgMode==='split'?appliedSettings.bgGrad:null),suppressBg:true});
-    else lazyLoadClock(2);
+    // Make analog bigger but cap to fit canvas
+    const effSize = Math.min(Math.floor(Math.min(w, h) * 0.45), Math.round(size * 1.25));
+    if (typeof window.renderClock2 === 'function') {
+      window.renderClock2(
+        offCtx, w, h, fontPaint, effSize, new Date(),
+        { bg: (appliedSettings.bgMode==='solid' ? appliedSettings.bgGrad && appliedSettings.bgGrad[0] : null),
+          bgGradient: ((appliedSettings.bgMode==='gradient'||appliedSettings.bgMode==='split') ? appliedSettings.bgGrad : null),
+          suppressBg: true }
+      );
+    } else {
+      lazyLoadClock(2);
+    }
+    // Overlay dot markers
+    drawAnalogDots(offCtx, w, h, fontPaint, effSize);
   } else if (style === "Clock 3") {
     // Use external Clock 3 implementation (lazy-load if needed)
     if (typeof window.renderClock3 === 'function') {
@@ -433,8 +464,19 @@ function drawPreview() {
     if (typeof window.renderClock1 === 'function') window.renderClock1(offCtx,w,h,fontPaint,previewSize,new Date(),{bg:(editingSettings.bgMode==='solid'?editingSettings.bgGrad&&editingSettings.bgGrad[0]:null),bgGradient:(editingSettings.bgMode==='gradient'||editingSettings.bgMode==='split'?editingSettings.bgGrad:null),suppressBg:true});
     else lazyLoadClock(1);
   } else if (style === "Clock 2") {
-  if (typeof window.renderClock2 === 'function') window.renderClock2(offCtx,w,h,fontPaint,Math.round(previewSize*0.8),new Date(),{bg:(editingSettings.bgMode==='solid'?editingSettings.bgGrad&&editingSettings.bgGrad[0]:null),bgGradient:(editingSettings.bgMode==='gradient'||editingSettings.bgMode==='split'?editingSettings.bgGrad:null),suppressBg:true});
-    else lazyLoadClock(2);
+    // Bigger preview size, same dot overlay
+    const effPrev = Math.min(Math.floor(Math.min(w, h) * 0.45), Math.round(previewSize * 1.25));
+    if (typeof window.renderClock2 === 'function') {
+      window.renderClock2(
+        offCtx, w, h, fontPaint, effPrev, new Date(),
+        { bg: (editingSettings.bgMode==='solid' ? editingSettings.bgGrad && editingSettings.bgGrad[0] : null),
+          bgGradient: ((editingSettings.bgMode==='gradient'||editingSettings.bgMode==='split') ? editingSettings.bgGrad : null),
+          suppressBg: true }
+      );
+    } else {
+      lazyLoadClock(2);
+    }
+    drawAnalogDots(offCtx, w, h, fontPaint, effPrev);
   } else if (style === "Clock 3") {
     // Flip clock preview (external, lazy-load if needed)
     if (typeof window.renderClock3 === 'function') {

@@ -66,7 +66,7 @@
       const avg = measured.reduce((a,b)=>a+b,0)/measured.length;
       overlap = Math.max(Math.round(avg * overlapRatio), 2);
       // smaller gap between hour and minute so groups sit closer
-      groupGap = Math.max(1, Math.round(fs * 0.11)); // slightly larger HH–MM gap
+      groupGap = Math.max(1, Math.round(fs * 0.17)); // slightly larger HH–MM gap
       // add one groupGap between HH and MM (after second digit)
       totalWidth = measured.reduce((a,b)=>a+b,0) - overlap * (chars.length - 1) + groupGap;
       lineHeight = Math.ceil(fs * 1.05);
