@@ -2,7 +2,7 @@
   const state = {
     shown: null,
     anims: [null, null, null, null],
-    dur: 900
+    dur: 100
   };
 
   function easeInOutSine(t) {
@@ -63,7 +63,7 @@
   }
 
   function drawTileStatic(c, x, y, rw, rh, digit, color) {
-    drawPlate(c, x, y, rw, rh);
+    // plate is drawn per pair, not per tile (prevents seams)
     const { font, fontSize } = getFont(rh);
     const hingeY = y + rh / 2;
     const baseOff = getBaselineOffset(c, font, digit, fontSize);
@@ -73,7 +73,7 @@
     const hingeI = Math.round(hingeY);
     const ov = hingeOverlap();
 
-    // top half (extend down by overlap)
+    // top half
     c.save();
     c.beginPath();
     c.rect(x, y, rw, (hingeI + ov) - y);
@@ -81,7 +81,7 @@
     c.drawImage(bmp, x, y);
     c.restore();
 
-    // bottom half (start a bit above by overlap)
+    // bottom half
     c.save();
     c.beginPath();
     c.rect(x, hingeI - ov, rw, y + rh - (hingeI - ov));
@@ -91,7 +91,7 @@
   }
 
   function drawTileAnimated(c, x, y, rw, rh, fromDigit, toDigit, color, progress) {
-    drawPlate(c, x, y, rw, rh);
+    // plate is drawn per pair, not per tile
     const { font, fontSize } = getFont(rh);
     const hingeY = y + rh / 2;
     const hingeLocal = hingeY - y;
@@ -112,17 +112,11 @@
 
     // Static layers under the moving flap
     if (t < 0.5) {
-      // bottom remains FROM
-      c.save();
-      c.beginPath(); c.rect(x, hingeI - ov, rw, y + rh - (hingeI - ov)); c.clip();
-      c.drawImage(fromBmp, x, y);
-      c.restore();
+      c.save(); c.beginPath(); c.rect(x, hingeI - ov, rw, y + rh - (hingeI - ov)); c.clip();
+      c.drawImage(fromBmp, x, y); c.restore();
     } else {
-      // top switches to TO
-      c.save();
-      c.beginPath(); c.rect(x, y, rw, (hingeI + ov) - y); c.clip();
-      c.drawImage(toBmp, x, y);
-      c.restore();
+      c.save(); c.beginPath(); c.rect(x, y, rw, (hingeI + ov) - y); c.clip();
+      c.drawImage(toBmp, x, y); c.restore();
     }
 
     // Animated flap
@@ -175,16 +169,26 @@
     if (!state.shown) state.shown = digits.slice();
     const ts = now.getTime();
 
+    // Layout: use a small negative inner gap so digits get even closer than touching
     let tileH = Math.floor(h * 0.95);
     let tileW = Math.floor(tileH * 0.56);
-    const gap = Math.max(2, Math.floor(tileH * 0.03));
-    let totalW = tileW * 4 + gap * 3;
+    // inner gap for digits: negative brings them closer than touching
+    let innerGap = -Math.max(1, Math.round(tileW * 0.02)); // ~ -2% of tile width
+    // visible gap between HH and MM
+    let groupGap = Math.max(1, Math.floor(tileW * 0.18));
+    // total width (two pairs with innerGap between tiles in each pair)
+    let pairW = tileW * 2 + innerGap; // can be less than 2*tileW when innerGap < 0
+    let totalW = pairW * 2 + groupGap;
+
     const maxW = Math.floor(w * 0.96);
     if (totalW > maxW) {
       const scale = maxW / totalW;
       tileW = Math.floor(tileW * scale);
       tileH = Math.floor(tileH * scale);
-      totalW = tileW * 4 + gap * 3;
+      innerGap = Math.round(innerGap * scale);   // keep negative ratio
+      groupGap = Math.max(1, Math.floor(groupGap * scale));
+      pairW = tileW * 2 + innerGap;
+      totalW = pairW * 2 + groupGap;
     }
     const cx = Math.floor((w - totalW) / 2);
     const cy = Math.floor((h - tileH) / 2);
@@ -194,17 +198,28 @@
     else if (typeof window !== 'undefined' && window.appliedSettings && window.appliedSettings.color) baseColor = window.appliedSettings.color;
     const uniformColor = (paint && typeof paint !== 'string') ? paint : baseColor;
 
+    // Start animations
     for (let i = 0; i < 4; i++) {
       if (state.shown[i] !== digits[i] && !state.anims[i]) {
         state.anims[i] = { from: state.shown[i], to: digits[i], start: ts, dur: state.dur };
       }
     }
 
+    // Positions with negative inner gap: [H1][H2(overlap)][group][M1][M2(overlap)]
+    const x0 = cx;
+    const x1 = x0 + tileW + innerGap;
+    const x2 = x1 + tileW + groupGap;
+    const x3 = x2 + tileW + innerGap;
+
+    // Draw a single background plate per pair to avoid any seam/dark overlap
+    drawPlate(ctx, x0, cy, (x1 + tileW) - x0, tileH); // HH combined plate
+    drawPlate(ctx, x2, cy, (x3 + tileW) - x2, tileH); // MM combined plate
+
     const positions = [
-      { x: cx, color: uniformColor, i: 0 },
-      { x: cx + tileW + gap, color: uniformColor, i: 1 },
-      { x: cx + (tileW + gap) * 2, color: uniformColor, i: 2 },
-      { x: cx + (tileW + gap) * 3, color: uniformColor, i: 3 },
+      { x: x0, color: uniformColor, i: 0 },
+      { x: x1, color: uniformColor, i: 1 },
+      { x: x2, color: uniformColor, i: 2 },
+      { x: x3, color: uniformColor, i: 3 },
     ];
 
     positions.forEach(({ x, color, i }) => {
