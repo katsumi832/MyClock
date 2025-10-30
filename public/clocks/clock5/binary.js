@@ -1,13 +1,13 @@
 (function () {
-  // Clock 5 — per-digit color + averaged overlap and colon on top
+  // Clock 5 — per-digit color + averaged overlap
   window.renderClock5 = function (ctx, w, h, paint, size, now, opts) {
     now = now || new Date();
     ctx.clearRect(0, 0, w, h);
 
-    // digits
+    // digits (colon removed)
     const hh = String(now.getHours()).padStart(2, '0');
     const mm = String(now.getMinutes()).padStart(2, '0');
-    const chars = [hh[0], hh[1], ':', mm[0], mm[1]];
+    const chars = [hh[0], hh[1], mm[0], mm[1]];
 
     // color helpers
     function isHex(c) { return typeof c === 'string' && /^#([0-9a-f]{3}|[0-9a-f]{6}|[0-9a-f]{8})$/i.test(c.trim()); }
@@ -62,11 +62,11 @@
     let measured = [], overlap = 0, totalWidth = 0, lineHeight = 0, groupGap = 0;
     function measureFor(fs) {
       ctx.font = `${weight} ${fs}px ${family}`;
-      measured = chars.map(ch => ch === ':' ? Math.max(fs*0.28, fs*0.22) : ctx.measureText(ch).width);
+      measured = chars.map(ch => ctx.measureText(ch).width);
       const avg = measured.reduce((a,b)=>a+b,0)/measured.length;
       overlap = Math.max(Math.round(avg * overlapRatio), 2);
-      // smaller gap between hour and minute so groups sit closer
       groupGap = Math.round(fs * 0.02);
+      // add one groupGap between HH and MM (after second digit)
       totalWidth = measured.reduce((a,b)=>a+b,0) - overlap * (chars.length - 1) + groupGap;
       lineHeight = Math.ceil(fs * 1.05);
       return { totalWidth, lineHeight };
@@ -83,7 +83,6 @@
     const glyphs = [];
     for (let i=0;i<chars.length;i++){
       const ch = chars[i];
-      if (ch === ':') { glyphs[i] = null; continue; }
       const chW = Math.ceil(measured[i]);
       const chH = Math.ceil(lineHeight*1.2);
       const g = document.createElement('canvas');
@@ -100,11 +99,8 @@
     // composite: comp canvas same size as target
     const comp = document.createElement('canvas'); comp.width = w; comp.height = h;
     const cctx = comp.getContext('2d');
-    // initialize comp transparent
     cctx.clearRect(0,0,w,h);
 
-    // draw and merge: we'll draw first non-colon glyph into comp, then for each next glyph we'll merge by averaging pixels
-    // helper to draw a glyph at global position on a tmp full-size canvas
     function drawGlyphToFull(glyph, posX, posY){
       const tmp = document.createElement('canvas'); tmp.width = w; tmp.height = h;
       const t = tmp.getContext('2d');
@@ -112,7 +108,6 @@
       t.drawImage(glyph.canvas, posX, posY);
       return tmp;
     }
-
     function mergeAverageToComp(tmpCanvas){
       const compData = cctx.getImageData(0,0,w,h);
       const tmpCtx = tmpCanvas.getContext('2d');
@@ -121,22 +116,13 @@
       for (let p=0;p<cd.length;p+=4){
         const sa = td[p+3]/255, da = cd[p+3]/255;
         if (sa===0 && da===0) { /* nothing */ }
-        else if (da === 0) {
-          // copy src pixel
-          cd[p]   = td[p];
-          cd[p+1] = td[p+1];
-          cd[p+2] = td[p+2];
-          cd[p+3] = td[p+3];
-        } else if (sa === 0) {
-          // keep dest
-        } else {
-          // both present: weighted average by alpha
+        else if (da === 0) { cd[p]=td[p]; cd[p+1]=td[p+1]; cd[p+2]=td[p+2]; cd[p+3]=td[p+3]; }
+        else if (sa !== 0) {
           const sumA = sa + da;
-          const r = Math.round((td[p]*sa + cd[p]*da) / sumA);
-          const g = Math.round((td[p+1]*sa + cd[p+1]*da) / sumA);
-          const b = Math.round((td[p+2]*sa + cd[p+2]*da) / sumA);
-          const a = Math.min(255, Math.round((sa + da) * 255));
-          cd[p] = r; cd[p+1] = g; cd[p+2] = b; cd[p+3] = a;
+          cd[p]   = Math.round((td[p]*sa   + cd[p]*da)   / sumA);
+          cd[p+1] = Math.round((td[p+1]*sa + cd[p+1]*da) / sumA);
+          cd[p+2] = Math.round((td[p+2]*sa + cd[p+2]*da) / sumA);
+          cd[p+3] = Math.min(255, Math.round((sa + da) * 255));
         }
       }
       cctx.putImageData(compData,0,0);
@@ -144,55 +130,44 @@
 
     // iterate glyphs, placing them at absolute positions
     let x = startX;
-    // compute absolute positions for each glyph to reuse
     const positions = [];
     for (let i=0;i<chars.length;i++){
-      const ch = chars[i];
       const chW = measured[i];
       positions[i] = { x: Math.round(x), y: Math.round(centerY - (lineHeight*1.2)/2) };
-      // advance; include groupGap after colon
-      if (ch === ':') x += chW - overlap + groupGap;
-      else x += chW - overlap;
+      // advance; include a single groupGap after the second digit (between HH and MM)
+      x += chW - overlap + (i === 1 ? groupGap : 0);
     }
 
-    // draw first numeric glyph into comp (source-over)
-    let firstIndex = -1;
-    for (let i=0;i<chars.length;i++){
-      if (chars[i] !== ':') { firstIndex = i; break; }
-    }
-    if (firstIndex >= 0) {
-      const ginfo = glyphs[firstIndex];
-      cctx.globalCompositeOperation = 'source-over';
-      cctx.drawImage(ginfo.canvas, positions[firstIndex].x, positions[firstIndex].y);
-    }
+    // draw first glyph into comp
+    let firstIndex = 0;
+    const ginfo0 = glyphs[firstIndex];
+    cctx.globalCompositeOperation = 'source-over';
+    cctx.drawImage(ginfo0.canvas, positions[firstIndex].x, positions[firstIndex].y);
 
     // draw remaining glyphs merging by averaging
     for (let i=firstIndex+1;i<chars.length;i++){
-      if (chars[i] === ':') continue;
       const ginfo = glyphs[i];
       const full = drawGlyphToFull(ginfo, positions[i].x, positions[i].y);
-      // merge average tmp into comp
       mergeAverageToComp(full);
     }
 
     // finally draw comp onto main canvas
     ctx.drawImage(comp, 0, 0);
 
-    // draw colon on top in semi-transparent white
+    // draw two white semi-transparent circles (":") between HH and MM — no background fill
+    const hourRightX = positions[1].x + measured[1] - Math.round(overlap / 2);
+    const minuteLeftX = positions[2].x + Math.round(overlap / 2);
+    const cx = Math.round((hourRightX + minuteLeftX) / 2);
+    const dotR = Math.max(Math.round(fontSize * 0.09), 6);
+    // move the colon upward: negative offset raises the dots
+    const colonShift = (opts && typeof opts.colonOffsetY === 'number') ? opts.colonOffsetY : -Math.round(fontSize * 0.10);
+    const midY = centerY + colonShift;
+    const topY = midY - Math.round(fontSize * 0.18);
+    const bottomY = midY + Math.round(fontSize * 0.18);
+    ctx.save();
     ctx.fillStyle = 'rgba(255,255,255,0.6)';
-    for (let i=0;i<chars.length;i++){
-      const ch = chars[i];
-      const chW = measured[i];
-      if (ch === ':') {
-        const pos = positions[i];
-        const dotR = Math.max(Math.round(fontSize * 0.09), 6);
-        const cx = pos.x + chW/2;
-        const topY = centerY - Math.round(fontSize * 0.18);
-        const bottomY = centerY + Math.round(fontSize * 0.18);
-        ctx.beginPath(); ctx.arc(cx, topY, dotR, 0, Math.PI*2); ctx.fill();
-        ctx.beginPath(); ctx.arc(cx, bottomY, dotR, 0, Math.PI*2); ctx.fill();
-      }
-    }
-
+    ctx.beginPath(); ctx.arc(cx, topY, dotR, 0, Math.PI * 2); ctx.fill();
+    ctx.beginPath(); ctx.arc(cx, bottomY, dotR, 0, Math.PI * 2); ctx.fill();
+    ctx.restore();
   };
 })();
