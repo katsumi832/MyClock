@@ -65,7 +65,8 @@
       measured = chars.map(ch => ctx.measureText(ch).width);
       const avg = measured.reduce((a,b)=>a+b,0)/measured.length;
       overlap = Math.max(Math.round(avg * overlapRatio), 2);
-      groupGap = Math.round(fs * 0.02);
+      // smaller gap between hour and minute so groups sit closer
+      groupGap = Math.max(1, Math.round(fs * 0.11)); // slightly larger HH–MM gap
       // add one groupGap between HH and MM (after second digit)
       totalWidth = measured.reduce((a,b)=>a+b,0) - overlap * (chars.length - 1) + groupGap;
       lineHeight = Math.ceil(fs * 1.05);
@@ -90,7 +91,8 @@
       const gctx = g.getContext('2d');
       gctx.textBaseline = 'middle'; gctx.textAlign='left';
       gctx.font = `${weight} ${fontSize}px ${family}`;
-      const fill = (i===0||i===3) ? selectedColor : lighterColor;
+      // First hour (i=0) and first minute (i=2) use the same primary color
+      const fill = (i === 0 || i === 2) ? selectedColor : lighterColor;
       gctx.fillStyle = fill;
       gctx.fillText(ch, 3, g.height/2);
       glyphs[i] = { canvas: g, w: g.width, h: g.height };
@@ -164,6 +166,8 @@
     const midY = centerY + colonShift;
     const topY = midY - Math.round(fontSize * 0.18);
     const bottomY = midY + Math.round(fontSize * 0.18);
+
+    // semi-transparent white, no background — remains transparent
     ctx.save();
     ctx.fillStyle = 'rgba(255,255,255,0.6)';
     ctx.beginPath(); ctx.arc(cx, topY, dotR, 0, Math.PI * 2); ctx.fill();
