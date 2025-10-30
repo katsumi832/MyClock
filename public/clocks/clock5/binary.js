@@ -20,14 +20,15 @@
              s === 'white' || /^rgba?\(\s*255\s*,\s*255\s*,\s*255(\s*,\s*1(\.0+)?)?\s*\)$/.test(s);
     }
 
-    // determine user color (Clock 5 special default: #ff4081 only when incoming is app default white)
+    // determine user color
+    // Default to #ff4081, but honor explicit selections (including white)
     let selectedColor = '#ff4081';
     if (typeof paint === 'string' && paint.trim().length) {
-      selectedColor = isWhiteColor(paint) ? '#ff4081' : paint;
+      selectedColor = paint; // use as-is (white allowed)
     } else if (window && window.editingSettings && window.editingSettings.color) {
-      const c = window.editingSettings.color;
-      selectedColor = isWhiteColor(c) ? '#ff4081' : c;
+      selectedColor = window.editingSettings.color; // use as-is (white allowed)
     }
+
     // compute lighter variant for second digits
     let lighterColor = selectedColor;
     if (isHex(selectedColor)) {
