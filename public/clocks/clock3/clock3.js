@@ -310,17 +310,19 @@
     // layout: two pair cards (HH and MM)
     let tileH = Math.floor(h * 0.95);
     let tileW = Math.floor(tileH * 0.56);
-    let innerGap = Math.max(1, Math.floor(tileW * 0.06)); // gap between two digits inside a pair
-    let pairW = tileW * 2 + innerGap;
-    let groupGap = innerGap * 2; // gap between HH and MM cards
+    // no gap between two digits inside each pair card
+    let innerGap = 0;
+    let pairW = tileW * 2;
+    // keep separation between HH and MM cards
+    let groupGap = Math.max(1, Math.floor(tileW * 0.12));
     let totalW = pairW * 2 + groupGap;
     const maxW = Math.floor(w * 0.96);
     if (totalW > maxW) {
       const scale = maxW / totalW;
       tileW = Math.floor(tileW * scale);
       tileH = Math.floor(tileH * scale);
-      innerGap = Math.max(1, Math.floor(innerGap * scale));
-      pairW = tileW * 2 + innerGap;
+      innerGap = 0; // keep no inner gap after scaling
+      pairW = tileW * 2;
       groupGap = Math.max(1, Math.floor(groupGap * scale));
       totalW = pairW * 2 + groupGap;
     }
