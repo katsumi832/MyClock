@@ -3,7 +3,7 @@
   const state = {
     shown: null,
     anims: [null, null, null, null],
-    dur: 400,
+    dur: 200,
     // pair-level state (HH, MM)
     pShown: null,
     pAnims: [null, null]
@@ -33,6 +33,27 @@
     const radius = Math.floor(rw * 0.08);
     roundRectFill(c, x, y, rw, rh, radius, plate);
   }
+
+  // (keep, but no longer used for seam-on-top)
+  function drawSplitPlate(c, x, y, rw, rh) {
+    // base plate (keeps rounded corners)
+    drawPlate(c, x, y, rw, rh);
+    // seam at hinge
+    const dpr = (typeof window !== 'undefined' && window.devicePixelRatio) ? window.devicePixelRatio : 1;
+    const hingeY = Math.round(y + rh / 2);
+    const seamH = Math.max(1, Math.round(1 * dpr));
+    c.save();
+    // dark center seam
+    c.fillStyle = 'rgba(0,0,0,0.35)';
+    c.fillRect(x, hingeY - Math.floor(seamH / 2), rw, seamH);
+    // light bevel above and below
+    c.fillStyle = 'rgba(255,255,255,0.10)';
+    c.fillRect(x, hingeY - seamH - 1, rw, 1);
+    c.fillStyle = 'rgba(0,0,0,0.20)';
+    c.fillRect(x, hingeY + seamH, rw, 1);
+    c.restore();
+  }
+
   function getFont(rh) {
     const weight = 700;
     const family = '"Bebas Neue", "Roboto Condensed", "Segoe UI", system-ui, sans-serif';
@@ -169,7 +190,8 @@
   }
 
   // static pair card (split draw to avoid hinge seam)
-  function drawPairTileStatic(c, x, y, rw, rh, pairText, color, innerGap) {
+  function drawPairTileStatic(c, x, y, rw, rh, pairText, color, innerGap, seamColor) {
+    // draw base plate; hinge seam is drawn on top later
     drawPlate(c, x, y, rw, rh);
     const { font, fontSize } = getFont(rh);
     const hingeY = y + rh / 2;
@@ -184,10 +206,14 @@
 
     c.save(); c.beginPath(); c.rect(x, hingeI - ov, rw, y + rh - (hingeI - ov)); c.clip();
     c.drawImage(bmp, x, y); c.restore();
+
+    // draw the middle gap on top of numbers, using background-like color
+    drawHingeOverlay(c, x, y, rw, rh, seamColor);
   }
 
   // animated pair card
-  function drawPairTileAnimated(c, x, y, rw, rh, fromPair, toPair, color, progress, innerGap) {
+  function drawPairTileAnimated(c, x, y, rw, rh, fromPair, toPair, color, progress, innerGap, seamColor) {
+    // draw base plate; hinge seam is drawn on top later
     drawPlate(c, x, y, rw, rh);
     const { font, fontSize } = getFont(rh);
     const hingeY = y + rh / 2;
@@ -249,6 +275,27 @@
       c.fillStyle = g; c.fillRect(x - 2, 0, rw + 4, rh);
       c.restore();
     }
+
+    // draw the middle gap on top of the number during animation
+    drawHingeOverlay(c, x, y, rw, rh, seamColor);
+  }
+
+  // seam helpers: resolve background-like color and draw hinge overlay on top
+  function resolveSeamColor(opts) {
+    if (opts && typeof opts.bg === 'string' && opts.bg) return opts.bg;
+    try {
+      const bodyBg = getComputedStyle(document.body).backgroundColor;
+      if (bodyBg && bodyBg !== 'rgba(0, 0, 0, 0)') return bodyBg;
+    } catch(_) {}
+    return '#000'; // Electron window background
+  }
+  function drawHingeOverlay(c, x, y, rw, rh, color) {
+    const hingeY = Math.round(y + rh / 2);
+    const seamH = Math.max(2, Math.round(rh * 0.01)); // thin but visible
+    c.save();
+    c.fillStyle = color;
+    c.fillRect(x, hingeY - Math.floor(seamH / 2), rw, seamH);
+    c.restore();
   }
 
   // main render (keeps existing API: renderClock3(ctx, w, h, paint, size, now, opts))
@@ -286,6 +333,9 @@
     else if (typeof window !== 'undefined' && window.appliedSettings && window.appliedSettings.color) baseColor = window.appliedSettings.color;
     const uniformColor = (paint && typeof paint !== 'string') ? paint : baseColor;
 
+    // resolve seam color to match background
+    const seamColor = resolveSeamColor(opts);
+
     // pair strings
     const pairs = [hh, mm];
     if (!state.pShown) state.pShown = pairs.slice();
@@ -308,20 +358,20 @@
     const aH = state.pAnims[0];
     if (aH) {
       const p = Math.min(1, (ts - aH.start) / aH.dur);
-      drawPairTileAnimated(ctx, xH, cy, pairW, tileH, aH.from, aH.to, uniformColor, p, innerGap);
+      drawPairTileAnimated(ctx, xH, cy, pairW, tileH, aH.from, aH.to, uniformColor, p, innerGap, seamColor);
       if (p >= 1) { state.pShown[0] = aH.to; state.pAnims[0] = null; }
     } else {
-      drawPairTileStatic(ctx, xH, cy, pairW, tileH, state.pShown[0], uniformColor, innerGap);
+      drawPairTileStatic(ctx, xH, cy, pairW, tileH, state.pShown[0], uniformColor, innerGap, seamColor);
     }
 
     // draw MM pair card
     const aM = state.pAnims[1];
     if (aM) {
       const p = Math.min(1, (ts - aM.start) / aM.dur);
-      drawPairTileAnimated(ctx, xM, cy, pairW, tileH, aM.from, aM.to, uniformColor, p, innerGap);
+      drawPairTileAnimated(ctx, xM, cy, pairW, tileH, aM.from, aM.to, uniformColor, p, innerGap, seamColor);
       if (p >= 1) { state.pShown[1] = aM.to; state.pAnims[1] = null; }
     } else {
-      drawPairTileStatic(ctx, xM, cy, pairW, tileH, state.pShown[1], uniformColor, innerGap);
+      drawPairTileStatic(ctx, xM, cy, pairW, tileH, state.pShown[1], uniformColor, innerGap, seamColor);
     }
   };
 })();
