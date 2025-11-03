@@ -189,88 +189,6 @@ function drawDigital(ctx, w, h, color, size) {
   ctx.fillText(text, w / 2, h / 2);
 }
 
-function drawAnalog(ctx, w, h, color, size) {
-  ctx.clearRect(0, 0, w, h);
-  const now = new Date();
-  const radius = size;
-  const cx = w / 2;
-  const cy = h / 2;
-
-  // 文字盤
-  ctx.strokeStyle = color;
-  ctx.lineWidth = 6;
-  ctx.beginPath();
-  ctx.arc(cx, cy, radius, 0, 2 * Math.PI);
-  ctx.stroke();
-
-  // 目盛り
-  for (let i = 0; i < 12; i++) {
-    const angle = (i * Math.PI) / 6;
-    const x1 = cx + Math.cos(angle) * (radius - 10);
-    const y1 = cy + Math.sin(angle) * (radius - 10);
-    const x2 = cx + Math.cos(angle) * radius;
-    const y2 = cy + Math.sin(angle) * radius;
-    ctx.beginPath();
-    ctx.moveTo(x1, y1);
-    ctx.lineTo(x2, y2);
-    ctx.stroke();
-  }
-
-  const sec = now.getSeconds();
-  const min = now.getMinutes();
-  const hr = now.getHours() % 12;
-
-  // 時針
-  ctx.lineWidth = 8;
-  ctx.beginPath();
-  ctx.moveTo(cx, cy);
-  ctx.lineTo(
-    cx + Math.cos(((hr + min / 60) * Math.PI) / 6 - Math.PI / 2) * (radius * 0.5),
-    cy + Math.sin(((hr + min / 60) * Math.PI) / 6 - Math.PI / 2) * (radius * 0.5)
-  );
-  ctx.stroke();
-
-  // 分針
-  ctx.lineWidth = 6;
-  ctx.beginPath();
-  ctx.moveTo(cx, cy);
-  ctx.lineTo(
-    cx + Math.cos(((min + sec / 60) * Math.PI) / 30 - Math.PI / 2) * (radius * 0.75),
-    cy + Math.sin(((min + sec / 60) * Math.PI) / 30 - Math.PI / 2) * (radius * 0.75)
-  );
-  ctx.stroke();
-
-  // 秒針
-  ctx.strokeStyle = "#e53935";
-  ctx.lineWidth = 3;
-  ctx.beginPath();
-  ctx.moveTo(cx, cy);
-  ctx.lineTo(
-    cx + Math.cos((sec * Math.PI) / 30 - Math.PI / 2) * (radius * 0.9),
-    cy + Math.sin((sec * Math.PI) / 30 - Math.PI / 2) * (radius * 0.9)
-  );
-  ctx.stroke();
-}
-
-// Add: helper to draw dot markers around the analog clock (no background)
-function drawAnalogDots(c, w, h, paint, size) {
-  const cx = w / 2, cy = h / 2;
-  const r = size; // align with analog radius
-  const ringR = r * 0.92; // slightly inside the ring
-  c.save();
-  try { c.fillStyle = paint; } catch (e) { c.fillStyle = '#ffffff'; }
-  for (let i = 0; i < 60; i++) {
-    const ang = (i * Math.PI) / 30 - Math.PI / 2;
-    const x = cx + Math.cos(ang) * ringR;
-    const y = cy + Math.sin(ang) * ringR;
-    const dotR = (i % 5 === 0)
-      ? Math.max(2, Math.round(size * 0.03))   // hour marks
-      : Math.max(1, Math.round(size * 0.012)); // minute marks
-    c.beginPath(); c.arc(x, y, dotR, 0, Math.PI * 2); c.fill();
-  }
-  c.restore();
-}
-
 function drawMinimal(ctx, w, h, color, size) {
   ctx.clearRect(0, 0, w, h);
   // removed filling a background color so canvas remains transparent
@@ -382,8 +300,6 @@ function renderClock() {
     } else {
       lazyLoadClock(2);
     }
-    // Overlay dot markers
-    drawAnalogDots(offCtx, w, h, fontPaint, effSize);
   } else if (style === "Clock 3") {
     // Use external Clock 3 implementation (lazy-load if needed)
     if (typeof window.renderClock3 === 'function') {
@@ -467,7 +383,7 @@ function drawPreview() {
     if (typeof window.renderClock1 === 'function') window.renderClock1(offCtx,w,h,fontPaint,previewSize,new Date(),{bg:(editingSettings.bgMode==='solid'?editingSettings.bgGrad&&editingSettings.bgGrad[0]:null),bgGradient:(editingSettings.bgMode==='gradient'||editingSettings.bgMode==='split'?editingSettings.bgGrad:null),suppressBg:true});
     else lazyLoadClock(1);
   } else if (style === "Clock 2") {
-    // Bigger preview size, same dot overlay
+    // Bigger preview size
     const effPrev = Math.min(
       Math.floor(Math.min(w, h) * 0.49),
       Math.round(previewSize * 1.35)
@@ -482,7 +398,6 @@ function drawPreview() {
     } else {
       lazyLoadClock(2);
     }
-    drawAnalogDots(offCtx, w, h, fontPaint, effPrev);
   } else if (style === "Clock 3") {
     // Flip clock preview (external, lazy-load if needed)
     if (typeof window.renderClock3 === 'function') {
