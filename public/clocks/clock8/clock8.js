@@ -30,15 +30,15 @@
     const family = `"Segoe UI", system-ui, sans-serif`;
 
     // vertical shift: hours lower, minutes higher
-    const vShiftMag = Math.round(panelH * 0.04); // reduce shift a bit more to allow bigger font
+    const vShiftMag = Math.round(panelH * 0.02); // even less shift to allow a bigger font
     // global downward offset for all digits (can be overridden via opts.offsetY)
     const globalDown = (opts && typeof opts.offsetY === 'number')
       ? Math.round(opts.offsetY)
       : Math.round(panelH * 0.10); // moved further down by default
 
     // Fit font so top/bottom don't clip even after the shifts
-    let fontSize = Math.max(16, Math.floor(panelH * 1.75)); // larger base size target
-    const margin = Math.floor(panelH * 0.003); // even smaller margin to free more height
+    let fontSize = Math.max(16, Math.floor(panelH * 2.05)); // larger base size target
+    const margin = Math.floor(panelH * 0.001); // minimal margin for maximum height
     // include downward offset in fit (worst-case is vShiftMag + globalDown)
     const allowedH = Math.max(8, panelH - 2 * margin - 2 * (vShiftMag + Math.max(0, globalDown)));
     function measureDigitHeight(fs) {
