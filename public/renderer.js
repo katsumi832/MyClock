@@ -49,7 +49,7 @@ const applyBtn = document.getElementById("apply-btn");
 // ------------------
 // 時計スタイル
 // ------------------
-const clockStyles = ["Clock 1", "Clock 2", "Clock 3", "Clock 4", "Clock 5", "Clock 6", "Clock 7"];
+const clockStyles = ["Clock 1", "Clock 2", "Clock 3", "Clock 4", "Clock 5", "Clock 6", "Clock 7", "Clock 8"];
 let currentStyleIndex = 0;
 
 // 選択状態（未保存の編集）
@@ -341,6 +341,12 @@ function renderClock() {
       s.onload = () => { window._clock7ScriptLoaded = true; };
       document.body.appendChild(s);
     }
+  } else if (style === "Clock 8") {
+    if (typeof window.renderClock8 === 'function') {
+      window.renderClock8(offCtx, w, h, fontPaint, size, new Date(), { suppressBg: true });
+    } else {
+      lazyLoadClock(8);
+    }
   }
 
   // Composite offscreen rendering on top of the centralized background
@@ -352,7 +358,15 @@ function lazyLoadClock(n) {
   if (window[key]) return;
   window[key] = true;
   const s = document.createElement('script');
-  s.src = `clocks/clock${n}/${n===1? 'digital' : n===2? 'analog' : n===3? 'clock3' : n===4? 'clock4' : n===5? 'binary' : n===6? 'clock6' : 'clock7'}.js`;
+  s.src = `clocks/clock${n}/${
+    n===1? 'digital' :
+    n===2? 'analog'  :
+    n===3? 'clock3'  :
+    n===4? 'clock4'  :
+    n===5? 'binary'  :
+    n===6? 'clock6'  :
+    n===7? 'clock7'  : 'clock8'
+  }.js`;
   s.onload = () => { /* loaded */ };
   document.body.appendChild(s);
 }
@@ -428,6 +442,12 @@ function drawPreview() {
       window.renderClock7(offCtx, w, h, fontPaint, previewSize, new Date(), { suppressBg: true });
     } else {
       lazyLoadClock(7);
+    }
+  } else if (style === "Clock 8") {
+    if (typeof window.renderClock8 === 'function') {
+      window.renderClock8(offCtx, w, h, fontPaint, previewSize, new Date(), { suppressBg: true });
+    } else {
+      lazyLoadClock(8);
     }
   }
 
