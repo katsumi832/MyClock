@@ -287,8 +287,8 @@ function renderClock() {
   } else if (style === "Clock 2") {
     // Make analog bigger but cap to fit canvas
     const effSize = Math.min(
-      Math.floor(Math.min(w, h) * 0.49),  // larger radius cap; stays within canvas
-      Math.round(size * 1.35)             // slightly stronger scale from user size
+      Math.floor(Math.min(w, h) * 0.94),  // bigger radius cap; still safe from clipping
+      Math.round(size * 2.60)             // stronger scale from user size
     );
     if (typeof window.renderClock2 === 'function') {
       window.renderClock2(
@@ -385,8 +385,8 @@ function drawPreview() {
   } else if (style === "Clock 2") {
     // Bigger preview size
     const effPrev = Math.min(
-      Math.floor(Math.min(w, h) * 0.49),
-      Math.round(previewSize * 1.35)
+      Math.floor(Math.min(w, h) * 0.94),
+      Math.round(previewSize * 2.60)
     );
     if (typeof window.renderClock2 === 'function') {
       window.renderClock2(

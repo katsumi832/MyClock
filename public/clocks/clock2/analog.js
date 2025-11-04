@@ -18,66 +18,72 @@
       }
     }
 
-    // 12 square hour markers
+    // 12 hour markers: circles for 1,2,4,5,7,8,10,11; rectangles for 0,3,6,9
     ctx.save();
     try { ctx.fillStyle = paint; } catch { ctx.fillStyle = '#ffffff'; }
     const ringR = r * 0.85;
-    const side = Math.max(3, Math.round(size * 0.05));
+    const rectW = Math.max(6, Math.round(size * 0.15)); // radial length
+    const rectH = Math.max(3, Math.round(size * 0.05)); // tangential thickness
+    const dotR  = Math.max(3, Math.round(size * 0.03));
+    const circleIdx = new Set([1,2,4,5,7,8,10,11]);
     for (let i=0;i<12;i++){
       const ang = (i * Math.PI) / 6 - Math.PI/2;
       const x = cx + Math.cos(ang) * ringR;
       const y = cy + Math.sin(ang) * ringR;
-      ctx.fillRect(Math.round(x - side/2), Math.round(y - side/2), side, side);
+
+      if (circleIdx.has(i)) {
+        // circle marker
+        ctx.beginPath();
+        ctx.arc(Math.round(x), Math.round(y), dotR, 0, Math.PI*2);
+        ctx.fill();
+      } else {
+        // rectangular marker (radially oriented)
+        ctx.save();
+        ctx.translate(x, y);
+        ctx.rotate(ang);
+        ctx.fillRect(-rectW/2, -rectH/2, rectW, rectH);
+        ctx.restore();
+      }
     }
     ctx.restore();
 
-    // hands
+    // hands as rectangular sticks
     const sec = now.getSeconds() + now.getMilliseconds()/1000;
     const min = now.getMinutes() + sec/60;
     const hr  = (now.getHours()%12) + min/60;
 
-    ctx.save();
-    ctx.lineCap = 'round';
-    ctx.lineJoin = 'round';
+    function drawStick(angle, length, thickness, color) {
+      ctx.save();
+      ctx.translate(cx, cy);
+      ctx.rotate(angle);
+      ctx.fillStyle = color;
+      // from center to outer radius along the angle
+      ctx.fillRect(0, -thickness/2, length, thickness);
+      ctx.restore();
+    }
 
-    // hour
-    try { ctx.strokeStyle = paint; } catch { ctx.strokeStyle = '#ffffff'; }
-    ctx.lineWidth = Math.max(4, Math.round(r * 0.08));
-    ctx.beginPath();
-    ctx.moveTo(cx, cy);
-    ctx.lineTo(
-      cx + Math.cos((hr * Math.PI)/6 - Math.PI/2) * (r * 0.5),
-      cy + Math.sin((hr * Math.PI)/6 - Math.PI/2) * (r * 0.5)
-    );
-    ctx.stroke();
+    // angles
+    const hourAng = (hr * Math.PI)/6 - Math.PI/2;
+    const minAng  = (min * Math.PI)/30 - Math.PI/2;
+    const secAng  = (sec * Math.PI)/30 - Math.PI/2;
 
-    // minute
-    ctx.lineWidth = Math.max(3, Math.round(r * 0.06));
-    ctx.beginPath();
-    ctx.moveTo(cx, cy);
-    ctx.lineTo(
-      cx + Math.cos((min * Math.PI)/30 - Math.PI/2) * (r * 0.78),
-      cy + Math.sin((min * Math.PI)/30 - Math.PI/2) * (r * 0.78)
-    );
-    ctx.stroke();
+    // dimensions
+    const hourLen = r * 0.50, hourTh = Math.max(6, Math.round(r * 0.05));
+    const minLen  = r * 0.78, minTh  = Math.max(4, Math.round(r * 0.02));
+    const secLen  = r * 0.82, secTh  = Math.max(2, Math.round(r * 0.0035));
+
+    // hour and minute (use paint color)
+    const handColor = (typeof paint === 'string' || paint && paint.toString) ? paint : '#ffffff';
+    drawStick(hourAng, hourLen, hourTh, handColor);
+    drawStick(minAng,  minLen,  minTh,  handColor);
 
     // second (red)
-    ctx.strokeStyle = '#e53935';
-    ctx.lineWidth = Math.max(2, Math.round(r * 0.035));
-    ctx.beginPath();
-    ctx.moveTo(cx, cy);
-    ctx.lineTo(
-      cx + Math.cos((sec * Math.PI)/30 - Math.PI/2) * (r * 0.92),
-      cy + Math.sin((sec * Math.PI)/30 - Math.PI/2) * (r * 0.92)
-    );
-    ctx.stroke();
+    drawStick(secAng,  secLen,  secTh,  '#e53935');
 
     // white center circle
     ctx.fillStyle = '#ffffff';
     ctx.beginPath();
-    ctx.arc(cx, cy, Math.max(4, Math.round(r * 0.08)), 0, Math.PI*2);
+    ctx.arc(cx, cy, Math.max(4, Math.round(r * 0.04)), 0, Math.PI*2);
     ctx.fill();
-
-    ctx.restore();
   };
 })();
