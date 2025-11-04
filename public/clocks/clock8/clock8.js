@@ -27,14 +27,20 @@
 
     // font setup (square/straight font)
     const weight = 700; // Oswald
-    const family = `"Oswald", "Segoe UI", system-ui, sans-serif`;
+    const family = `"Segoe UI", system-ui, sans-serif`;
 
     // vertical shift: hours lower, minutes higher
-    const vShiftMag = Math.round(panelH * 0.08);
-    // Fit font so top/bottom don't clip even after the shift
-    let fontSize = Math.max(16, Math.floor(panelH * 1.25));
-    const margin = Math.floor(panelH * 0.02);
-    const allowedH = Math.max(8, panelH - 2 * margin - 2 * vShiftMag);
+    const vShiftMag = Math.round(panelH * 0.04); // reduce shift a bit more to allow bigger font
+    // global downward offset for all digits (can be overridden via opts.offsetY)
+    const globalDown = (opts && typeof opts.offsetY === 'number')
+      ? Math.round(opts.offsetY)
+      : Math.round(panelH * 0.10); // moved further down by default
+
+    // Fit font so top/bottom don't clip even after the shifts
+    let fontSize = Math.max(16, Math.floor(panelH * 1.75)); // larger base size target
+    const margin = Math.floor(panelH * 0.003); // even smaller margin to free more height
+    // include downward offset in fit (worst-case is vShiftMag + globalDown)
+    const allowedH = Math.max(8, panelH - 2 * margin - 2 * (vShiftMag + Math.max(0, globalDown)));
     function measureDigitHeight(fs) {
       ctx.font = `${weight} ${fs}px ${family}`;
       const m = ctx.measureText('8'); // tallest digit
@@ -58,11 +64,6 @@
 
     // fill color/paint
     try { ctx.fillStyle = paint; } catch { ctx.fillStyle = '#ffffff'; }
-
-    // global downward offset for all digits (can be overridden via opts.offsetY)
-    const globalDown = (opts && typeof opts.offsetY === 'number')
-      ? Math.round(opts.offsetY)
-      : Math.round(panelH * 0.03);
 
     // Draw each digit clipped to its panel with vertical offsets (hours lower, minutes higher)
     for (let i = 0; i < 4; i++) {
