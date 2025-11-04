@@ -27,20 +27,30 @@
 
     // font setup (square/straight font)
     const weight = 700; // Oswald
-    const family = `"Segoe UI", system-ui, sans-serif`;
+    const family = `system-ui, sans-serif`;
 
     // vertical shift: hours lower, minutes higher
-    const vShiftMag = Math.round(panelH * 0.02); // even less shift to allow a bigger font
-    // global downward offset for all digits (can be overridden via opts.offsetY)
-    const globalDown = (opts && typeof opts.offsetY === 'number')
-      ? Math.round(opts.offsetY)
-      : Math.round(panelH * 0.10); // moved further down by default
+    const vShiftMag = Math.round(panelH * 0.01); // minimize shift to allow bigger font
+    // per-group offsets: hours down, minutes up (can be overridden)
+    const hourOffsetDown = (opts && typeof opts.hourOffsetY === 'number')
+      ? Math.round(Math.max(0, opts.hourOffsetY))
+      : Math.round(panelH * 0.10);
+    const minOffsetUp = (opts && typeof opts.minOffsetY === 'number')
+      ? Math.round(Math.max(0, opts.minOffsetY))
+      : Math.round(panelH * 0.10);
+    // global push to move the whole numbers lower (can be overridden)
+    const globalPushDown = (opts && typeof opts.globalOffsetY === 'number')
+      ? Math.round(opts.globalOffsetY)
+      : Math.round(panelH * 0.06);
 
     // Fit font so top/bottom don't clip even after the shifts
-    let fontSize = Math.max(16, Math.floor(panelH * 2.05)); // larger base size target
+    let fontSize = Math.max(16, Math.floor(panelH * 2.60)); // larger base size target
     const margin = Math.floor(panelH * 0.001); // minimal margin for maximum height
-    // include downward offset in fit (worst-case is vShiftMag + globalDown)
-    const allowedH = Math.max(8, panelH - 2 * margin - 2 * (vShiftMag + Math.max(0, globalDown)));
+    // include worst-case extra (hours down plus global; minutes up reduced by global)
+    const maxExtra = Math.max(hourOffsetDown + globalPushDown, Math.abs(minOffsetUp - globalPushDown));
+    const allowedHBase = Math.max(8, panelH - 2 * margin - 2 * (vShiftMag + maxExtra));
+    // relax fit a bit more so numbers can be bigger without being scaled down too much
+    const allowedH = Math.floor(allowedHBase * 1.20);
     function measureDigitHeight(fs) {
       ctx.font = `${weight} ${fs}px ${family}`;
       const m = ctx.measureText('8'); // tallest digit
@@ -57,6 +67,9 @@
         measured = measureDigitHeight(fontSize);
       }
     }
+    // small oversize boost after fitting; configurable via opts.oversize
+    const oversize = (opts && typeof opts.oversize === 'number') ? Math.max(1, opts.oversize) : 1.08;
+    fontSize = Math.floor(fontSize * oversize);
 
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
@@ -70,10 +83,14 @@
       const x0 = Math.floor(i * panelW);
       const xCenter = Math.floor(x0 + panelW / 2);
       let yCenter = Math.floor(panelH / 2);
-      // apply precomputed shift
-      yCenter += (i < 2) ? vShiftMag : -vShiftMag;
-      // move the whole numbers slightly below
-      yCenter += globalDown;
+      // apply precomputed group shifts: hours down, minutes up
+      if (i < 2) {
+        yCenter += vShiftMag + hourOffsetDown;   // hours lower
+      } else {
+        yCenter -= vShiftMag + minOffsetUp;      // minutes higher
+      }
+      // move the whole numbers lower
+      yCenter += globalPushDown;
 
       ctx.save();
       // clip to panel rect so overflow is cropped
@@ -87,13 +104,12 @@
       ctx.restore();
     }
 
-    // divider lines between panels (on top of numbers)
-    const lineW = Math.max(2, Math.round(Math.min(w, h) * 0.004));
+    // divider lines between panels (on top of numbers) — pure black and thinner
     ctx.save();
-    ctx.strokeStyle = 'rgba(255,255,255,0.35)';
-    ctx.lineWidth = lineW;
+    ctx.strokeStyle = '#000'; // pure black
+    ctx.lineWidth = 0.1;      // thinner than before
     for (let k = 1; k < 4; k++) {
-      const xLine = Math.round(k * panelW);
+      const xLine = Math.floor(k * panelW) + 0.5; // center between panels, crisp 1px line
       ctx.beginPath();
       ctx.moveTo(xLine, 0);
       ctx.lineTo(xLine, h);
